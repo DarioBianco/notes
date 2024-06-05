@@ -1,6 +1,18 @@
 
 
+## Section 1: 
 
+#### 2. Install Visual Studio Code Extensions
+
+Extensions are like plugins that extend the functionality of VSCode. Here are the ones that I've installed. Click on the link and then click on the "install" button and it should automatically install it in your VSCode application.
+
+[Live Preview](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server)
+
+[Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+
+[vscode-icons](https://marketplace.visualstudio.com/items?itemName=vscode-icons-team.vscode-icons)
+
+[DigitalBrainstem.javascript-ejs-support](https://marketplace.visualstudio.com/items?itemName=DigitalBrainstem.javascript-ejs-support)
 
 ## Section 4: Multi-Page Websites
 
@@ -12,7 +24,7 @@
 
 #### Inline CSS:
 
-​        Use for a single element.
+​	        Use for a single element.
 ​        `<html style="background: blue"></html>`
 
 #### Internal Style Tag:
@@ -1729,7 +1741,7 @@ Install nodemon.
 npm i nodemon
 ```
 
-Run index.js with nodemon using the package's path within the project.
+Run index.js with nodemon using the package's path within the project (so that you don't need to install nodemon globally)
 
 ```console
 node node_modules/nodemon/bin/nodemon.js index.js
@@ -1759,11 +1771,11 @@ npm install
 
 Status Codes: 
 
-- 1XX: Hold on
-- 2XX: Here you go
-- 3XX: Go away!
-- 4XX: You fucked up. For example, wrong address or invalid endpoint.
-- 5XX: We fucked up
+- 1XX: "Hold on"
+- 2XX: "Here you go"
+- 3XX: "Go away!"
+- 4XX: "You fucked up. For example, wrong address or invalid endpoint."
+- 5XX: "We fucked up"
 
 #### Requests: GET, POST, PUT, PATCH, and DELETE
 
@@ -1829,7 +1841,7 @@ app.listen(port, () => {
 
 The next function is called to carry on with handling an incoming request after activating our middleware/function (E.g., proceed to another middleware function that may be installed/the next app.use()). Our middleware only logs a message including the request method. 
 
-If you want requests to be authenticated, you'll need to consider the order of running middleware.
+<u>If you want requests to be authenticated, you'll need to consider the order of running middleware.</u>
 
 ```js
 import { dirname } from "path";
@@ -1865,7 +1877,7 @@ function logger(req, res, next) {
 app.use(logger);
 
 app.get("/", (req, res) => {
-  res.send("Hello");
+  res.send(`The date and time is ${new Date()}.`);
 });
 
 app.listen(port, () => {
@@ -1943,8 +1955,10 @@ index.js
 
 ```index.js
 app.post("/submit", (req, res) => {
-    res.render("index.ejs", 
-	{ name = req.body["name"]});
+    res.render(
+        "index.ejs", 
+	      { name:req.body["name"] }
+	  );
 });
 ```
 
@@ -1984,6 +1998,19 @@ To get around this, use `locals`, because the locals variable will always exist.
 | <%% variable %%>             | Literal                                      | show "<%" or "%>"                          |
 | <%# This is a comment %>     | Comment                                      |                                            |
 | <%- include("*filename*") %> | Insert another EJS file in place of the tag. |                                            |
+
+NOTE: When EJS does templating, it's inserting a template string for arrays, so you may need to split the arrays.
+
+```ejs
+<script>
+  // The countries array will be received as a string, not an array. 
+	const country_code = "<%= countries %>".split(",");
+  console.log(typeof ("<%= countries %>"));
+</script>
+
+```
+
+
 
 ### EJS For loops
 
@@ -2094,7 +2121,7 @@ The person that owns the original repo has the final say about whether to ***pul
 
 
 
-# APIs
+## Section 28: APIs
 
 ### Parameters
 
@@ -2138,5 +2165,1535 @@ https://pattern.monster/
 
 
 
+## Making Server-Side Requests
+
+#### Using the Node's native module, the https module, for Requests.
+
+```js
+import https from "https";
+
+app.get("/", (req, res) => {
+  const options = {
+  	hostname: "bored-api.appbrewery.com",
+    path:"/random",
+    method: "GET"
+  };
+  
+  const request = https.request(options, (response) => {
+  	let data = "";
+  	response.on("data", (chunk) => {
+      data += chunk;
+    });
+    
+    response.on("end", () => {
+      try {
+        const result = JSON.parse(data);
+        res.render("index.ejs", {activity: data});
+      } catch (error) {
+        console.error("Failed to parse response:", error.message);
+        res.status(500).send("Failed to fetch activity. Please try again.")
+      }
+    })
+	});
+  
+  request.on("error", (error) => {
+    console.log("Failed to make request:", error.message);
+    res.status(500).send("Failed to fetch activity. Please try again.")
+  });
+
+	request.end();
+});
+```
 
 
+
+### Using Axios for Requests
+
+- Unlike the https package, Axios automatically waits to receive all chunks from a GET request before continuing.
+- Is promise-based, so we may use `await` or `.then()`.
+- Returns a JSON object, so you don't need to use `JSON.parse()`
+
+```js
+import axios from "axios";
+app.get("/", async (req, res) => {
+  try {
+    const response = await axios.get("https://bored-api.appbrewery.com/random");
+    res.render("index.ejs", {activity: response.data});
+  } catch (error) {
+    console.error("Failed to make requests:", error.message);
+    res.status(500).send("Failed to fetch activity. Please try again.");
+  }
+});
+```
+
+
+
+### API Authentication
+
+#### Types of Authentication Used:
+
+0. #### No Authentication
+
+   1. Allows anyone to access the API
+   2. API providers may specify a **rate limit** as a safety measure. E.g., 15 requests per minute.
+
+1. #### Basic Authentication
+
+   1. Provide a **username** and **password** when making each request.
+   2. Normally done by using a **Base64** encoded string in the request's **header**.
+   3. In the class example, the username and password were added to the body to register the redentials.
+      1. Xx-www-form-urlencoded
+   4. Add the username and password to the authorization header when using the credentials to make requests.
+      1. Select "Basic Auth" using Postman. Postman will encode the credentials together and add the result to the request header.
+      2. The Axios package will also encode and decode credentials for basic authentication for you.
+
+```console
+curl -H 'Content-Type: application/json' \
+   -d '{ "username":"foo", "password": "1"}' \
+   -X POST \
+   https://secrets-api.appbrewery.com/register
+```
+
+3. #### API Key Authorisation
+
+   1. In the class example, the key was passed as a parameter.
+
+4. #### Token-based Authentication
+
+   1. More secrure than passing credentials, which may be intercepted, in requests.
+   2. Tokens may expire to increase account security.
+   3. Each token may be rate-limited or have other restrictions.
+   4. May be used in combination with an API key rather than usernames and passwords.
+
+```console
+curl -H 'Content-Type: application/json' \
+   -d '{ "username":"foo", "password": "1"}' \
+   -X POST \
+   https://secrets-api.appbrewery.com/get-auth-token
+```
+
+
+
+### Public APIs
+
+https://github.com/appbrewery/public-api-lists?tab=readme-ov-file
+
+https://rapidapi.com/collection/list-of-free-apis
+
+
+
+## Section 30: Build Your Own API
+
+#### RapidAPI - Curates a list of APIs
+
+### Attributes of a RESTful API (A REpresentationsal State Transfer API):
+
+- It supports HTTP requests (e.g., GET, POST, PUT, PATCH, and DELETE)
+- It responds with a standard data format (e.g., JSON, XML, etc.) 
+  - This is "Representational" part of the Representational State Transfer
+- Clients and Servers are on separate systems
+- Statelessness. The server shall not store client data from previous requests.)
+- Resource-based. Uses a URI or URL
+
+
+
+### Automatically generate API Documentation with Postman
+
+Example:
+
+1. Create a new collection in Postman.
+
+2. Create a new HTTP request.
+
+3. Enter a method type (e.g., GET, POST, etc.) and URL for the new HTTP request.
+
+4. Send the request.
+
+5. You should be able to save the request to the new collection.
+
+6. Click on the kebob menu on the right of the collection's dropdown menu title.
+
+7. Select "View documentation".
+
+   This should show auto-generated API Definition Documentation including your requests as examples.
+
+   **Ensure the examples don't contain sensitive information**
+
+
+
+### Sample API Implementation
+
+```js
+import express from "express";
+// NOTE (2024-05-17):	body-parser is built into express now.
+import bodyParser from "body-parser";
+
+const app = express();
+const port = 3000;
+const masterKey = "4VGP2DN-6EWM4SJ-N6FGRHV-Z3PR3TT";
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.listen(port, () => {
+  console.log(`Successfully started server on port ${port}.`);
+});
+
+var jokes = [
+  {
+    id: 1,
+    jokeText:
+      "Why don't some couples go to the gym? Because some relationships don't work out.",
+    jokeType: "Science",
+  },
+  {
+    id: 2,
+    jokeText:
+      "Why did the scarecrow win an award? Because he was outstanding in his field.",
+    jokeType: "Puns",
+  },
+
+  ...
+  
+];
+```
+
+
+
+#### GET
+
+```js
+//1. GET a random joke
+app.get("/jokes/random", async (req, res) => {
+  const randomIndex = Math.floor(Math.random() * jokes.length + 1);
+  res.json(jokes[randomIndex]);
+});
+```
+
+
+
+#### GET (one)
+
+```js
+//2. GET a specific joke
+app.get(`/jokes/:id`, async (req, res) => {
+  // Access path parameter having the name "id".
+  // NOTE: Path parameters are returned as strings, so
+  // we need to convert the value for id to an integer.
+  const id = parseInt(req.params.id);
+  // Iterate through the joke array and return all
+  // jokes where joke.id === id is true.
+  // Type and value must match.
+  // Get a joke(s) having the specified ID, if any exist.
+  const foundJoke = jokes.find((joke) => joke.id === id);
+  if (!foundJoke) return res.sendStatus(404).json({message: "Joke not found."});
+  res.json(foundJoke);
+});
+```
+
+
+
+#### GET (based on query parameter(s))
+
+```js
+//3. GET a jokes by filtering on the joke type
+app.get(`/filter`, async (req, res) => {
+  const type = req.query.type;
+  const filteredJokes = jokes.filter(function (joke) {
+    return joke.jokeType === type;
+  });
+  // Equivalent to filteredJokes
+  const altFilteredJokes = jokes.filter((joke) => joke.jokeType === type);
+  res.json(filteredJokes);
+});
+```
+
+
+
+#### POST
+
+```js
+//4. POST a new joke
+// NOTE:
+//  Set the Body's 'Content-Type' to 'x-www-form-urlencoded' in Postman
+//  or to 'application/x-www-form-urlencoded' via cURL, Python, etc. when
+//  making the POST request.
+app.post(`/jokes`, async (req, res) => {
+  // The ID is calculated while text and type are
+  // extracted from the POST request body via
+  // body-parser.
+  const newJoke = {
+    id: jokes.length + 1,
+    jokeText: req.body.text,
+    jokeType: req.body.type
+  };
+  jokes.push(newJoke);
+  const lastJoke = jokes.slice(-1);
+  console.log(lastJoke);
+  res.json(newJoke);
+});
+```
+
+
+
+#### PUT
+
+```js
+//5. PUT a joke
+app.put(`/jokes/:id`, async (req, res) => {
+  const id = parseInt(req.params.id);
+  console.log(id);
+  const replacementJoke = {
+    id: id,
+    jokeText: req.body.text,
+    jokeType: req.body.type
+  };
+  // Get the index(es) of a joke(s) having the specified ID, if any exist.
+  const searchIndex = jokes.findIndex((joke) => joke.id === id);
+  // TODO Return error if not found.
+  jokes[searchIndex] = replacementJoke;
+  console.log(`Updated joke ${id}`)
+  res.json(replacementJoke);
+});
+```
+
+
+
+#### PATCH
+
+```js
+//6a. PATCH a joke
+app.patch(`/jokes/:id`, async (req, res) => {
+  const id = parseInt(req.params.id);
+  // Return true when the joke id 
+  // matches the received id parameter.
+  function isIdInJoke(joke) {
+    return joke.id === id;
+  }
+  const existingJoke = jokes.find(isIdInJoke);
+  const replacementJoke = {
+    id: id,
+    jokeText: req.body.text || existingJoke.jokeText,
+    jokeType: req.body.type || existingJoke.jokeType,
+  };
+  const searchIndex = jokes.findIndex(isIdInJoke);
+  jokes[searchIndex] = replacementJoke;
+  console.log(replacementJoke);
+  res.json(replacementJoke);
+});
+```
+
+
+
+#### PATCH (Alternative method using spread syntax)
+
+##### NOTE:  THIS IS DANGEROUS!!! Check received values' types, ranges, and content before using them!
+
+```js
+//6b. PATCH a joke
+app.patch(`/jokes/alt-patch/:id`, async (req, res) => {
+  const id = parseInt(req.params.id);
+  const searchIndex = jokes.findIndex((joke) => joke.id === id);
+  // Use spread syntax to override only the
+  // values that are listed as body parameters.
+  jokes[searchIndex] = {
+    ...jokes[searchIndex], ...req.body
+  };
+  res.json(jokes[searchIndex]);
+});
+```
+
+
+
+#### DELETE (one)
+
+```js
+//7. DELETE Specific joke
+app.delete(`/jokes/:id`, async (req, res) => {
+  const id = parseInt(req.params.id);
+  const searchIndex = jokes.findIndex((joke) => joke.id === id);
+  if (searchIndex > -1 ) {
+    jokes.splice(searchIndex, 1);
+		res.json({message: "Joke deleted."});
+    return;
+  } else {
+    res
+    .status(404)
+    .json({ error:  `Joke with id: ${id} not found. ` +
+    ` No jokes were deleted.`});
+  }
+});
+```
+
+
+
+#### DELETE (all)
+
+##### NOTE: DON'T PASS AN API KEY AS A QUERY PARAM AS SHOWN!!! Authorization will be elaborated on later in the course.
+```js
+//8. DELETE All jokes
+app.delete(`/all`, async (req, res) => {
+  // NOTE: DON'T PASS AN API KEY AS A QUERY PARAM AS SHOWN!!!
+  // Authorization will be elaborated on later in the course.
+  const userKey = req.query.key;
+  console.log(userKey);
+  if (userKey === masterKey) {
+    jokes = [];
+    res.sendStatus(200);
+    console.log("jokes =", jokes);
+  } else {
+    res
+    .status(404)
+    .json({ error:  "You are not authorized to perform this action."});
+  }
+});
+```
+
+
+
+## Section 32: SQL
+
+- https://www.w3schools.com/sql/
+- https://www.w3schools.com/sql/sql_datatypes.asp
+- https://www.w3schools.com/sql/sql_primarykey.asp
+- https://sqliteonline.com/
+- https://www.mycompiler.io/view/08q0XDT7TFp
+
+### CRUD
+
+#### CREATE
+
+```sql
+-- create customers table
+CREATE TABLE customers (
+  id INT,
+  first_name STRING,
+  last_name STRING,
+  address STRING,
+  PRIMARY KEY (id)
+);
+-- insert some values
+INSERT INTO customers VALUES (1, 'John', 'Doe', '32 Cherry Blvd');
+INSERT INTO customers VALUES (2, 'Angela', 'Yu', '12 Sunset Drive');
+-- fetch some values
+SELECT * FROM customers WHERE first_name = 'John';
+
+
+-- create the products table
+-- 'NOT NULL' indicates values are not optional and must be entered.
+CREATE TABLE products (
+    id INT NOT NULL,
+    name STRING,
+    price MONEY,
+    PRIMARY KEY (id)
+);
+
+-- Show all records in the customers table
+SELECT * FROM Customers
+
+-- insert a product into products table
+-- DON'T USE DOUBLE_QUOTES
+INSERT INTO products
+VALUES (1, 'Pen', 1.20);
+
+-- select a product with id = 1
+SELECT * FROM products WHERE id = 1;
+
+-- insert a product with no price into products table
+INSERT INTO products (id, name) VALUES (2, 'Pencil');
+
+-- select a product with id = 2
+SELECT * FROM products WHERE id = 2;
+```
+
+
+
+#### UPDATE (A value)
+
+```sql
+UPDATE products
+SET price = 0.80
+-- IF YOU DON'T ADD THE NEXT LINE, YOU'LL CHANGE ALL VALUES IN YOUR TABLE TO 0.80!!!
+WHERE id=2
+```
+
+##### ALTER (add a column)
+
+```sql
+ALTER TABLE products
+-- ADD Column_Name Data_Type  
+ADD stock INT
+```
+
+### Understanding SQL Relationships, Foreign Keys, and Inner Joins
+
+- https://www.w3schools.com/sql/sql_foreignkey.asp
+- https://www.w3schools.com/sql/sql_join_inner.asp
+
+```SQL
+CREATE TABLE orders (
+  id INT NOT NULL,
+  order_number INT,
+  customer_id INT,
+  product_id INT,
+  PRIMARY KEY (id),
+  -- Create relationships between this order table
+  -- and the customers and product tables.
+  -- id is the Foreign ID within the customers table
+  -- that is referenced in this orders table.
+  FOREIGN KEY (customer_id) REFERENCES customers(id)
+  FOREIGN KEY (product_id) REFERENCES product(id)
+);
+```
+
+
+
+
+
+
+
+
+
+```sql
+-- create customers table
+CREATE TABLE customers (
+  id INT,
+  first_name STRING,
+  last_name STRING,
+  address STRING,
+  PRIMARY KEY (id)
+);
+-- insert some values
+INSERT INTO customers VALUES (1, 'John', 'Doe', '32 Cherry Blvd');
+INSERT INTO customers VALUES (2, 'Angela', 'Yu', '12 Sunset Drive');
+-- fetch some values
+SELECT * FROM customers WHERE first_name = 'John';
+
+
+-- create the products table
+CREATE TABLE products (
+    id INT NOT NULL,
+    name STRING,
+    price MONEY,
+    PRIMARY KEY (id)
+);
+
+-- insert a product into products table
+INSERT INTO products VALUES (1, 'Pen', 1.20);
+
+-- select a product with id = 1
+SELECT * FROM products WHERE id = 1;
+
+-- insert a product with no price into products table
+INSERT INTO products (id, name) VALUES (2, 'Pencil');
+
+-- select a product with id = 2
+SELECT * FROM products WHERE id = 2;
+
+-- update a row in products table
+UPDATE products SET price=0.8 WHERE id = 2;
+
+-- select all records from products table
+SELECT * FROM products;
+
+-- add a new column - stock to the products table
+ALTER TABLE products ADD stock INT;
+
+-- update a row in products table
+UPDATE products SET stock=32 WHERE id = 1;
+
+-- select all records from products table
+SELECT * FROM products;
+
+-- update a row in products table
+UPDATE products SET stock=12 WHERE id = 2;
+
+-- select all records from products table
+SELECT * FROM products;
+
+-- delete a row from products table
+DELETE FROM products WHERE id = 2;
+
+-- insert back the deleted row into products table
+INSERT INTO products VALUES (2, 'Pencil', 0.8, 12);
+
+-- create the orders table
+CREATE TABLE orders (
+  id INT NOT NULL,
+  order_number INT,
+  customer_id INT,
+  product_id INT,
+  PRIMARY KEY (id),
+  FOREIGN KEY (customer_id) REFERENCES customers(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- insert an order into orders table
+INSERT INTO orders VALUES (1, 4362, 2, 1);
+
+-- join orders and customers table
+-- We want to create a new table having a combination of fields from different tables.
+-- We specify the <table>.<feild> to retrieve.
+SELECT orders.order_number, customers.first_name, customers.last_name, customers.address
+FROM orders
+-- From the orders table, you will find the particular foreign key match below for joining.
+INNER JOIN customers 
+-- The fields that must be matched on for joining are listed 
+ON orders.customer_id = customers.id;
+
+-- join orders and products table
+SELECT orders.order_number, products.name, products.price, products.stock
+FROM orders
+INNER JOIN products ON product_id = products.id;
+```
+
+
+
+## Section 33: PostgreSQL
+
+- Install the Postgres Server (if running locally)
+- Install pgAdmin - GUI for Postgres
+
+```postgresql
+CREATE TABLE friends (
+	id SERIAL PRIMARY KEY,
+  -- VARCHAR Variable Character
+  --   Limit data size to 50 characters
+  --   If sata size is less than 50, unused
+  --   char space will be truncated.
+  --   CHAR would not truncate unused space.
+  name VARCHAR(50),
+  age INT,
+  -- TEXT
+  --   Auto-truncates to data size (i.e., it's variable), but doesn't require you to specify a maximum size.
+  is_cool BOOLEAN
+);
+```
+
+
+
+##### NOTE!!! Sometimes Postgres will not start auto-indexing id values from the correct number.
+
+Here’s how you can check and fix the sequence alignment issue:
+
+### Checking Sequence Value
+
+You can check the current value of the sequence associated with your primary key using:
+
+```postgresql
+-- Get the last id value
+SELECT last_value FROM your_sequence_name;
+```
+
+Replace `your_sequence_name` with the actual name of your sequence. Often, the sequence name is `<table_name>_<column_name>_seq`.
+
+### Adjusting the Sequence Value
+
+If you find that the sequence value is out of sync, you can adjust it. For example, if the highest `id` in your table is 2, you should set the sequence to start from 3:
+
+```postgresql
+SELECT setval('your_sequence_name', (SELECT MAX(id) FROM your_table_name) + 1);
+```
+
+### Example Fix
+
+Let's say your table is `users` and the primary key column is `id`. The sequence might be named `users_id_seq`. Here’s how you can adjust it:
+
+1. Check the highest `id` value:
+
+   ```postgresql
+   SELECT MAX(id) FROM users;
+   ```
+
+2. Adjust the sequence:
+
+   ```postgresql
+   SELECT setval('users_id_seq', (SELECT MAX(id) FROM users) + 1);
+   ```
+
+This ensures the next inserted row will have a unique `id`.
+
+### Preventing Future Issues
+
+- **Avoid Manual Inserts with IDs**: Try to avoid inserting rows with explicit `id` values unless absolutely necessary.
+- **Use Transactions**: When modifying sequences or performing bulk inserts, use transactions to ensure consistency.
+- **Regular Maintenance**: Periodically check and maintain sequence values, especially after major data migrations or imports.
+
+
+
+#### Postgres Setup
+
+You may be asked to set a global password. This is a password used to access pgAdmin, and it is separate from the password that was set when installing PostgreSQL.
+
+- When selecting a server within pgAdmin, use the PostgreSQL password. The default username is `Postgres`.
+
+#### Create a new database within pgAdmin.
+
+1. From the left pane, expand Servers, PostgreSQL, and Databases.
+   1. There will be a default database called `postgres`. 
+2. Right-click on the 'Databases' dropdown title 
+3. Select `Create` from the popup menu.
+4. Select `Database...` from the menu.
+5. Enter a name for the database in the first field of the window that opens.
+6. Click `Save` to complete the process of creating a database.
+
+#### Create a Table via Query
+
+The last field line cannot include a comma to indicate the end of the line.
+
+```postgresql
+CREATE TABLE capitals (
+  id SERIAL PRIMARY KEY,
+  country VARCHAR(45),
+  capital VARCHAR(45)
+);
+
+CREATE TABLE visited_countries (
+	id SERIAL PRIMARY KEY,
+	country_code CHAR(2) NOT NULL UNIQUE
+);
+```
+
+#### Read From a Table via Query
+
+```postgresql
+SELECT * FROM public.capitals
+ORDER BY id ASC LIMIT 100;
+```
+
+#### Import Data into a Table with pgAdmin
+
+- Right-click on a table name from the left pane.
+- Select an option for importing.
+- Select the file to import.
+- In the `Options` tab, make sure the `Header` option is enabled. 
+  - This option tells pgAdmin that the first row contains a header, not data.
+  - NOTE: If the `Header` option was enabled, the `Columns` tab should show the column names of the file to be imported.
+  - If the source file doesn't include an ID, remove the ID column name from the `Columns to Import` list.
+- Click `OK` to import the file.
+
+#### Rename Fields in pgAdmin
+
+- Right-click on a table name from the left pane.
+- Select `Properties...`
+-  Navigate to the `Columns` tab.
+- Replace the field name to rename.
+- Click `Save`.
+
+#### Reading PostgreSQL DB Data from NodeJS-Express Backend
+
+The following instruction will be used to read data from the databse.
+
+```postgresql
+SELECT * FROM <Name of Table>
+```
+
+```js
+import express from "express";
+import bodyParser from "body-parser";
+// Import Postgres Package
+import pg from "pg";
+
+const app = express();
+const port = 3000;
+
+// Create and configure an instance of a Postgres client.
+const db = new pg.Client({
+  user: "postgres",
+  host: "localhost",
+  database: "world",
+  password: "123456", // Password used when installing Postgres.
+  port: 5432,
+});
+
+// Connect to the Postgres database
+db.connect();
+
+let quiz = [];
+
+// Run the query against the database.
+db.query("SELECT * FROM flags", (err, res) => {
+  if (err) {
+    console.error("Error executing query", err.stack);
+  } else {
+    // Save the result of the query if no error.
+    quiz = res.rows;
+  }
+  // Disconnect from the database
+  db.end();
+});
+```
+
+#### Get a Column's Data from a Table
+
+```postgresql
+-- Retrieve a single column.
+SELECT <column name> FROM <table name>;
+
+-- Retrieve multiple columns.
+SELECT <column 1 name>, <column 2 name> 
+FROM <table name>;
+```
+
+#### Filter Column Data
+
+```postgresql
+SELECT <column name>
+FROM <table name>
+WHERE <condition>;
+
+-- Example 1 (Exact Match)
+SELECT rice_production
+FROM world_food
+WHERE country = 'United States';
+
+-- Example 2 (Similar)
+-- To use a pattern to look for within a field 
+-- instead of requiring an exact match.
+-- E.g. Accept 'United States' as 'United States of America'.
+SELECT rice_production
+FROM world_food
+WHERE country LIKE 'United States'
+
+-- Example 3 (Similar)
+-- To use the concatenate operator, ||, and
+-- a wildcard, %, in place of a word.
+-- E.g. 'United" || '%' can be used to 
+--      return 'United States', `United Kingdom`, etc.
+SELECT country
+FROM world_food
+WHERE country LIKE 'United' || '%';
+
+-- Example 4 (Similar)
+-- Use a wildcard, %, to get words that
+-- start with a pattern.
+-- E.g., Countries that start with 'U'.
+SELECT country
+FROM world_food
+WHERE LOWER country LIKE 'U' || '%';
+-- WHERE country LIKE 'U%';
+```
+
+
+
+```js
+// GET home page
+app.get("/", async (req, res) => {
+  const result = await db.query("SELECT country_code FROM visited_countries");
+  // TODO handle errors.
+  let countries = [];
+  result.rows.forEach((country) => {
+    countries.push(country.country_code);
+  });
+  console.log(result.rows);
+  res.render("index.ejs", { countries: countries, total: countries.length });
+  // db.end(); // Don't close the connection...
+});
+```
+
+
+
+```postgresql
+INSERT INTO <table_name> (<column_name_1>, <column_name_n>)
+VALUES 
+	(<value_1>, <value_n>),
+	(<value_1>, <value_n>);
+```
+
+
+
+```js
+try {
+  const query = `
+    INSERT INTO world_food
+    (country, rice_production, wheat_production)
+    VALUES ($1, $2, $3)
+  `;
+  db.query(
+    query, 
+    ["Italy", 1.46, 7.3]
+  );
+} catch (err) {
+  console.log(err);
+  const countries = await checkVisited();
+  res.render("index.ejs", {
+    countries: countries,
+    error: err
+  });
+}
+```
+
+#### One to One Relationships & Inner Joins
+
+- This is a way to modularize a database because data associated with an ID in a main table, but that doesn't need to be accessed as frequently, doesn't need to be in the main table. Splitting less frequently accessed data in a main table into smaller table(s) can result in faster response times and makes them easier to search.
+- [Draw.io](Draw.io)
+
+##### student(id) is linked to contact_detail(id) in the following:
+
+- E.g., once in a while, you may need to contact a student's parents.
+
+```postgresql
+CREATE TABLE student (
+  id SERIAL PRIMARY KEY,
+  first_name TEXT,
+  last_name TEXT
+);
+
+CREATE TABLE contact_detail (
+  id INTEGER REFERENCES student(id) UNIQUE,
+  tel TEXT,
+  address TEXT
+);
+```
+
+##### Inner Join
+
+```postgresql
+-- Get the combined record data from `student` and `contact_details` for a given `id`. 
+SELECT *
+FROM student
+-- This is an Inner Join that combines tables base on the `ON` criteria below.
+JOIN contact_detail	
+ON student.id = contact_detail.id
+ORDER BY last_name ASC; -- ORDER BY id DESC
+```
+
+#### One-to-Many Relationships
+
+- This is the most common relationship.
+- E.g., In a class, there is one student, but the student will have many homework submissions.
+  - Each homework submission is associated with a single student (No group assignments in this example).
+  - In UML, the foreign key will have crow's feet near its label to indicate there's a many-to-one relationship back to a student.
+  - The `homework submissions` table would need an ID to identify each homework submission in addition to a foreign key that links it back to the `student` table.
+
+```postgresql
+CREATE TABLE student (
+  id SERIAL PRIMARY KEY,
+  first_name TEXT,
+  last_name TEXT
+);
+
+-- Many to One --
+-- NOTE: It's probably better to pluralize the table name
+--   to indicate a many-to-one relation back to `students`.
+--   e.g., `homework_submissions` 
+CREATE TABLE homework_submission (
+  id SERIAL PRIMARY KEY,
+  mark INTEGER, -- homework score
+  -- Look for the student table,
+  -- find the `id` field within the table,
+  -- and set it as a relation to the
+  -- `student_id` field in this table.
+  student_id INTEGER REFERENCES student(id)
+);
+```
+
+##### JOIN
+
+```postgresql
+-- Join --
+SELECT student.id, first_name, last_name, mark
+FROM student
+JOIN homework_submission
+ON student.id = student_id
+-- more verbose, but also works
+ON student.id = homework_submission.student_id
+```
+
+#### Many-to-Many Relationsship
+
+- Least-use kind of relationship
+- In UML, a many-to-may relationship may be represented as two tables with crow's feet on both ends. The relationship may also be represented with an intermediary table, where crow's feet come out of the main tables that connect to the intermediary table. The intermediary table would contain an id for the intermediary table and a foreign key to each table in the relationship.
+- Makes it possible to make queries that return the number of classes a student is taking, the number of students in a class, and the names of classes that students are taking together. 
+
+```postgresql
+-- Many students may enroll in many classes.
+-- Many classes will have many enrolled students.
+CREATE TABLE student (
+  id SERIAL PRIMARY KEY,
+  first_name TEXT,
+  last_name TEXT
+);
+-- Many to Many --
+CREATE TABLE class (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(45)
+);
+
+-- The REFERENCES keywords indicate the fields are foreign keys.
+CREATE TABLE enrollment (
+  student_id INTEGER REFERENCES student(id),
+  class_id INTEGER REFERENCES class(id),
+  -- The primary key is set to a combination of the two primary keys.
+  -- Each of the primary keys should be unique.
+  -- The primary key must be unique, and using a combination of
+  -- the two primary keys ensures that each combination is unique.
+  PRIMARY KEY (student_id, class_id)
+);
+```
+
+##### Inserting Data into Tables (for reference):
+
+```postgresql
+-- Data --
+INSERT INTO student (first_name, last_name)
+VALUES ('Jack', 'Bauer');
+
+INSERT INTO class (title)
+VALUES ('English Literature'), ('Maths'), ('Physics');
+
+INSERT INTO enrollment (student_id, class_id ) VALUES (1, 1), (1, 2);
+INSERT INTO enrollment (student_id ,class_id) VALUES (2, 2), (2, 3);
+```
+
+##### Fetching Data from the Many-to-Many Relationship Tables:
+
+```postgresql
+-- Get everything from the combination of tables.
+SELECT *
+FROM enrollment 
+JOIN student ON student.id = enrollment.student_id
+JOIN class ON class.id = enrollment.class_id;
+```
+
+```postgresql
+-- Get student.id, first_name, last_name, title from the combination of tables.
+-- Use the `student.id` as the `stud` in the returned data.
+-- Setting an alias with 'AS' helps us disambiguate between fields with similar names.
+-- Aliases also allows us to use shorthand for fields.
+SELECT student.id AS stud, first_name, last_name, title
+FROM enrollment AS e
+-- `FROM enrollment e` is equivalent to `FROM enrollment AS e`.
+JOIN student ON stud = e.student_id
+JOIN class AS c ON c.id = e.class_id;
+```
+
+
+
+### How to Update and Delete Data & Tables
+
+`ALTER` Is often used to change the schema of a table.
+
+```postgresql
+ALTER TABLE <table to alter>
+	<do something>;
+
+-- Rename Table
+ALTER TABLE student
+	RENAME TO user;
+
+-- Change Column Datatype
+ALTER TABLE student
+	ALTER COLUMN first_name TYPE VARCHAR(20);
+	
+-- Add a Column
+ALTER TABLE contact_details
+	ADD email TEXT
+```
+
+
+
+##### Unique Constraint across fields
+As an example of where this is useful: If tracking countries user's have visited with the fields country_code and user_id, the constraint UNIQUE (country_code,  user_id) would prevent a country code from being repeated for each user. Different users could list the same country code to indicate they also visited the same country.
+
+```postgresql
+-- E.g., a and c cannon both be set to 1.
+CREATE TABLE example (
+	a integer,
+	b integer,
+  c integer,
+  UNIQUE (a, c) -- a & c must be unique WHEN COMBINED TOGETHER.
+);
+-- If the table already exists without UNIQUE (a, c)
+ALTER TABLE example
+	ADD UNIQUE (a, c);
+```
+
+
+
+```postgresql
+UPDATE <table to update>
+	SET <column to update> = <value, ...>
+	-- e.g., WHERE name = 'Angela';
+	WHERE <some condition>;
+```
+
+
+
+```postgresql
+DELETE FROM <table to delete>
+WHERE <condition> AND <condition>;
+
+
+```
+
+
+
+
+
+"Use of `RETURNING` avoids performing an extra database query to collect the data, and is especially valuable when it would otherwise be difficult to identify the modified rows reliably." - [Postgres Docs](https://www.postgresql.org/docs/current/dml-returning.html)
+
+
+
+## Section 35: Authentication & Security: Handling Credentials and Designing a Secure Login
+
+The fastest systems can compute:
+
+- 20,000,000,000 MD5 Hashes/second (Hashed Passwords), or
+- 17,000 bcrypt Hashes/second (Salted Passwords)
+
+https://encode-decode.com/aes256-encrypt-online/
+
+### Level 3 - How to Salt Passwords for Improved Encryption
+
+#### Password Hashing
+
+```js
+import bcrypt from 'bcrypt";'
+const saltRounds = 10; // at least 10 is recommended
+
+app.post("/register", async (req, res) => {
+  const email = req.body.username;
+  const password = req.body.password;
+  try {
+    const checkResult = await db.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    if (checkResult.rows.length > 0) {
+      res.send("Email already exists. Try logging in.");
+    } else {
+      // Password hashing
+      // After passing a password and a number of salt rounds,
+      // bcrypt.hash() will return either an error or a hash and
+      // cause a callback function to execute.
+      bcrypt.hash(password, saltRounds, async (err, hash) => {
+        if (err) {
+          console.log("Error message:", err);
+        } else {
+          const result = await db.query(
+            "INSERT INTO users (email, password) VALUES ($1, $2)",
+            // [email, password]
+            [email, hash] // We pass the salted password as the password.
+          );
+          console.log(result);
+        }
+      });
+      res.render("secrets.ejs");
+    }
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+```
+
+
+
+#### Use `bcrypt.compare()` to compare a user-entered password to a hashed password that is stored in a database:
+
+```js
+app.post("/login", async (req, res) => {
+  const email = req.body.username;
+  const loginPassword = req.body.password;
+
+  try {
+    const result = await db.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const storedHashedPassword = user.password;
+      bcrypt.compare(loginPassword, storedHashedPassword, (err, result) => {
+        if (err) {
+          console.log("Error comparing password.", err);
+        } else {
+          if (result) {
+            // Result was true, so render the secret page.
+            res.render("secrets.ejs");
+          } else {
+            // Result was false, so indicate incorrect password.
+            res.send("Incorrect Password");
+          }
+        }
+      });
+    } else {
+      res.send("User not found");
+    }
+  } catch (err) {
+    console.log(err);
+  }
+});
+```
+
+### Managing Cookies and Sessions
+
+- The `passport` Node module manages cookies and sessions.
+  - https://www.passportjs.org/
+  - Includes 'strategies' that allow people to , for example, login with Twitter, Facebook, Apple, etc.  
+- `passport` requires the following Node modules:
+  - `express-session` enables session persistence by saving the cookie to the user's browser.
+  - `passport`
+  - `passport-local` enables username and password to your local database.
+
+
+
+```js
+import express from "express";
+import bodyParser from "body-parser";
+import pg from "pg";
+import bcrypt from "bcrypt";
+// Allows us to set up a new session to start saving user login sessions.
+import session from "express-session";
+import passport from "passport";
+// Use a local Passport 'stategy' to authenticate locally
+// (i.e., with our database rather than an external service). 
+// This is also know as a local strategy.
+import { Strategy } from "passport-local";
+
+const app = express();
+const port = 3000;
+const saltRounds = 10;
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public"));
+
+/*
+  Use session as a middleware, create a new instance, and pass in some options.
+  Options we're configuring:
+  secret: a secret used to sign the session cookie.
+    This is used as the key to keep the session secret.
+    Because we're bypassing the usename and password, we
+    need to make sure we're protecting the user's login information.
+  resave: a setting that allows us to save a session to a database.
+    E.g., even if server restarts, sessions can be restored from Postgres.
+  saveUninitialized: do we want to save the session to the server's memory
+*/
+app.use(session({
+  // TODO See next section about using environmental variables.
+  secret: "TOPSECRETWORD",
+  resave: false,
+  saveUninitialized: true,
+  // cookie can be omitted if you want the session to
+  // end once the browser is closed.
+  cookie: {
+    // number of milliseconds a cookie should persist
+    // (even after closing a browser)
+    maxAge: 1000 * 60 * 60 * 24, // Persist for 1 day (86400000 ms).
+  }
+}));
+
+// Passport configuration must occur AFTER establishing
+// the session initialization above.
+app.use(passport.initialize());
+app.use(passport.session());
+
+// TODO These values should be stored as environmental variables.
+const db = new pg.Client({
+  user: "postgres",
+  host: "localhost",
+  database: "secrets",
+  password: "123456",
+  port: 5432,
+});
+db.connect();
+
+app.get("/", (req, res) => {
+  res.render("home.ejs");
+});
+
+app.get("/login", (req, res) => {
+  res.render("login.ejs");
+});
+
+app.get("/register", (req, res) => {
+  res.render("register.ejs");
+});
+
+app.post("/register", async (req, res) => {
+  const email = req.body.username;
+  const password = req.body.password;
+
+  // try {
+  //   const checkResult = await db.query("SELECT * FROM users WHERE email = $1", [
+  //     email,
+  //   ]);
+  //   if (checkResult.rows.length > 0) {
+  //     res.send("Email already exists. Try logging in.");
+  //   } else {
+  //     //hashing the password and saving it in the database
+  //     bcrypt.hash(password, saltRounds, async (err, hash) => {
+  //       if (err) {
+  //         console.error("Error hashing password:", err);
+  //       } else {
+  //         console.log("Hashed Password:", hash);
+  //         await db.query(
+  //           "INSERT INTO users (email, password) VALUES ($1, $2)",
+  //           [email, hash]
+  //         );
+  //         res.render("secrets.ejs");
+  //       }
+  //     });
+  //   }
+  // } catch (err) {
+  //   console.log(err);
+  // }
+
+  // Updated to use Passport
+  try {
+    const checkResult = await db.query(
+      "SELECT * FROM users WHERE email = $1", 
+      [email,]
+    );
+    if (checkResult.rows.length > 0) {
+      res.send("Email already exists. Try logging in.");
+    } else {
+      // Hashing the password and saving it in the database
+      bcrypt.hash(password, saltRounds, async (err, hash) => {
+        if (err) {
+          console.error("Error hashing password:", err);
+        } else {
+          console.log("Hashed Password:", hash);
+          const result = await db.query(`
+            INSERT INTO users (email, password)
+            VALUES ($1, $2)
+            RETURNING *
+            `,
+            [email, hash]
+          );
+          const user = result.rows[0];
+          // This print the hashed password to the console, so it's acceptable.
+          console.log("Registered User:", user);
+          // Use req.login() from Passport, not req.logIn().
+          req.login(user, (err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              res.redirect("/secrets");
+            }
+          });
+        }
+      });
+    }
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+app.get("/secrets", (req, res) => {
+  // We added this user with Passport when verifying.
+  console.log(req.user);
+  
+  // isAuthenticated() comes from the Passport module,
+  // which allows the user to access a page if they already
+  // logged in and have an active session.
+  if (req.isAuthenticated()) {
+    res.render("secrets.ejs");
+  } else {
+    // You may see a cookie for 'http://localhost:3000' under
+    // Chrome developer tools > Application (tab) > Cookies (left pane)
+    res.redirect("/login");
+  }
+});
+
+app.post(
+  "/login", 
+  // async (req, res) => {
+  //   /*
+  //     We don't need to get req.body form data when using Passport.
+  //     Passport automatically grabs this 
+  //     content from HTML form submissions.
+  //   */
+  //   // const email = req.body.username;
+  //   // const loginPassword = req.body.password;
+  //
+  //   // -- MOVED TO THE NEW Passport Strategy DEFINITION. -- 
+  //   // try {
+  //   //   const result = await db.query("SELECT * FROM users WHERE email = $1", [
+  //   //     email,
+  //   //   ]);
+  //   //   if (result.rows.length > 0) {
+  //   //     const user = result.rows[0];
+  //   //     const storedHashedPassword = user.password;
+  //   //     bcrypt.compare(loginPassword, storedHashedPassword, (err, result) => {
+  //   //       if (err) {
+  //   //         console.error("Error comparing passwords:", err);
+  //   //       } else {
+  //   //         if (result) {
+  //   //           res.render("secrets.ejs");
+  //   //         } else {
+  //   //           res.send("Incorrect Password");
+  //   //         }
+  //   //       }
+  //   //     });
+  //   //   } else {
+  //   //     res.send("User not found");
+  //   //   }
+  //   // } catch (err) {
+  //   //   console.log(err);
+  //   // }
+  // }
+  /// Use Passport as middleware instead of using a callback.
+  /// This will trigger the strategy used to authenticate users.
+  passport.authenticate("local", { // Specifies which strategy to use, in case you have > 1
+    successRedirect: "/secrets",
+    failureRedirect: "/login"
+  })
+);
+
+app.get("/logout", (req, res) => {
+  // Use req.logout() for use with Passport, not req.logOut().
+  req.logout((err) => {
+    if (err) console.log(err);
+      res.redirect("/");
+  });
+});
+
+// Place this just above our app.listen() method.
+// Register a new strategy.
+// Note: in the Passport world, `cb` is used as shorthand for callback.
+// Note: the `verify` funciton argument names need to match the names from
+//  the form that submits the login request.
+// NOTE: Passport is triggered whenever we try to authenticate a new user,
+//  so we'll end up in our `verify` function. 
+passport.use(
+  "local", // Gives the strategy a name
+  new Strategy(async function verify(username, loginPassword, cb) {
+    /// DON'T CONSOLE LOG PASSWORDS AS PLAIN TEXT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    console.log(
+      "Local Strategy's verify function arguments from HTML form:", 
+      username,
+      loginPassword
+    );
+
+    try {
+      const result = await db.query("SELECT * FROM users WHERE email = $1", [
+        // email,  // changed to username to match the HTML form.
+        username,
+      ]);
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        const storedHashedPassword = user.password;
+        bcrypt.compare(loginPassword, storedHashedPassword, (err, result) => {
+          if (err) {
+            console.error("Error comparing passwords:", err);
+            return cb(err);
+          } else {
+            if (result) {
+              // res.render("secrets.ejs");
+              // When using Passport, instead of res.rendering secrets.ejs,
+              // we'll pass a callback here.
+              // 
+              // `cb` will recieve either an error or user data when
+              // called from the verify function.
+              // 
+              // Note: the error value is set to null because no
+              //  error occurred if the bcrypt.compare result was true.
+              return cb(null, user);
+            } else {
+              // res.send("Incorrect Password");
+              // The user entered an incorrect password, so set
+              // isAuthenticated() to false.
+              return cb(null, false);
+            }
+          }
+        });
+      } else {
+        // res.send("User not found");
+        return cb("User not found");
+      }
+    } catch (err) {
+      console.log(err);
+      return cb(err);
+    }
+  }
+));
+
+// Save the data of the user that's logged in to local storage.
+// We can use the callback to pass over any information of the user.
+passport.serializeUser((user, cb) => {
+  cb(null, user);
+});
+
+// Saves users information (e.g., id, email) to the local session, and
+// deserializes it into a usable form.
+passport.deserializeUser((user, cb) => {
+  cb(null, user);
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+```
+
+### Level 5 - Hide your Secrets with Environment Variables
+
+- https://www.npmjs.com/package/dotenv
+
+#### How to use the Dotenv module:
+
+1. Create a `.env` file in the root of your project folder.
+2. Add the `.env` file to a `.gitignore` file.
+   1. GitHub's list of files you probably want to ignore:
+      1. https://github.com/github/gitignore/blob/main/Node.gitignore
+3. Give your variable a name and assign a value (See example below).
+   1. The name is in all caps by convention.
+   2. Don't add spaces on either side of the equal sign. 
+4. Import the dotenv module in all JS files that need to access environmental variables.
+   1. `import env from "dotenv";`
+5. Initialize env
+   1. `env.config();`
+
+#### .env file
+
+```.env
+SESSION_SECRET="TOPSECRETWORD"
+PG_USER="postgres"
+PG_HOST="localhost"
+PG_DATABASE="secrets"
+PG_PASSWORD="123456"
+PG_PORT="5432"
+```
+
+#### index.js file
+
+```js
+app.use(
+  session({
+    secret: "TOPSECRETWORD",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+// Becomes
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+```
+
+
+
+### Use OAuth to Sign in with Google:
+
+- "Scopes are the fields that you will receive once the user logs in through google. We're just interested in the email so click on "Add Or Remove Scopes". And add a checkmark:"
+  - Select ".../auth/userinfo.email" "See your primary Google Account email address" to receive the user's email address.
+
+#### Create an OAuth Client ID for the Secrets project:
+
+- Navigate to https://console.cloud.google.com/ and sign in with your Google/gmail account.
+- Create a new Project
+- Go to the "API & Services" page.
+- You need to create an OAuth Client ID in the "Credential" tab by clicking on the "Create Credentials" button.
+- Select "Web Application" as the application type.
+- Set the "Authorized JavaScript origins" to `http://localhost:3000` for local development.
+- Set the "Authorized redirect URIs" to `http://localhost:3000/auth/google/secrets`.
+  - This is the path where your users are redirected to after they have authenticated with google. You basically want to show your logged in users the secret page, so that's what you need to configure here.
+- Click 'Create'.
+- Copy the Client ID and Secret Key ("Client Secret") and save it (securely).
+
+
+
+Auth Code: One time access
+
+Access Token: Extended access (E.g., one year)
