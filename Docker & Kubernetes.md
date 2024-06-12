@@ -631,6 +631,8 @@ ARG DEFAULT_PORT=80
 ENV PORT $DEFAULT_PORT
 EXPOSE $PORT
 ...
+# Assuming we're running nodemon for development 
+# (i.e., we're not running `node server.js`.)
 CMD [ "npm", "start" ]
 ```
 ### The port will be set to 80 because it isn't specified
@@ -655,7 +657,7 @@ docker build -t feedback-node:dev --build-arg DEFAULT_PORT=8000 .
 
 #### `localhost` vs `host.docker.internal`
 
-`host.docker.internal` is a domain that is recognized by Docker and is understood as the IP address of the localhost as seen from inside the container.
+`host.docker.internal` is a domain that is recognized by Docker and is understood as the IP address of the localhost (that the container is running on) as seen from inside the container.
 
 ```js
 const express = require('express');
@@ -669,6 +671,7 @@ mongoose.connect(
 	//'mongodb://localhost:27017/swfavorites',
 	
 	// Replace 'localhost' with a URL that Docker recognizes.
+	// NOTE 27017 is the default MongoDB port
 	'mongodb://host.docker.internal:27017/swfavorites',
 	{ useNewUrlParser: true },
 	(err) => {
@@ -687,7 +690,7 @@ mongoose.connect(
 Get the container's IP Address with `docker inspect`:
 - Th `IPAddress` will be under `NetworkSettings`.
 ```console
-docker run mongo -d --name mongodb mongo
+docker run -d --name mongodb mongo
 docker inspect mongodb
 ```
 
@@ -730,7 +733,7 @@ docker run -d --name favorites --network favorites-net -d --rm -p 3000:3000 favo
 const express = require('express');
 const mongoose = require("mongoose");
 
-// Assume MongoDB is running in another container.
+// Assume MongoDB is running in another container, called 'mongodb'.
 // Assume the Mongo container was already added to a container network.
 mongoose.connect(
 	// Replace 'localhost' with the name of a conatiner that is already on the container network (In this case `mongodb).
@@ -748,3 +751,132 @@ mongoose.connect(
 
 List Docker Networks
 - `docker network ls`
+
+> [!NOTE] Docker Network Drivers (Module/Section 77)
+> Docker Networks actually support different kinds of "**Drivers**" which influence the behavior of the Network.
+>
+> The default driver is the "**bridge**" driver - it provides the behavior shown in this module (i.e. Containers can find each other by name if they are in the same Network).
+>
+>The driver can be set when a Network is created, simply by adding the `--driver` option.
+>
+>```console
+docker network create --driver bridge my-net
+>```
+>
+>Of course, if you want to use the "bridge" driver, you can simply omit the entire option since "bridge" is the default anyway.
+>
+>Docker also supports these alternative drivers - though you will use the "bridge" driver in most cases:
+>
+>- **host**: For standalone containers, isolation between container and host system is removed (i.e. they share localhost as a network)
+  >  
+>- **overlay**: Multiple Docker daemons (i.e. Docker running on different machines) are able to connect with each other. Only works in "Swarm" mode which is a dated / almost deprecated way of connecting multiple containers
+ >   
+>- **macvlan**: You can set a custom MAC address to a container - this address can then be used for communication with that container
+ >   
+>- **none**: All networking is disabled.
+  >  
+>- **Third-party plugins**: You can install third-party plugins which then may add all kinds of behaviors and functionalities
+> 
+> As mentioned, the "**bridge**" driver makes most sense in the vast majority of scenarios.
+
+
+## Section 5: Building Multi-Container Applications with Docker
+
+Reminders
+- Run `docker container prune` to make sure you don't have old containers running that your browser may connect to when testing.
+- Run `docker image prune -a` to remove unused images.
+
+### Use system's localhost network as the network for containers
+- Use `host.docker.internal` as the IP address to connect to the localhost network.
+```console
+docker run --name mongodb --rm -d -p 27017:27017 mongo
+
+cd backend
+sudo docker build -t goals-node .
+docker run --name goals-backend --rm -d -p 80:80 goals-node
+
+cd ../frontend
+sudo docker build -t goals-react .
+docker run --name goals-frontend --rm -d -p 3000:3000 goals-react
+```
+
+### Use a Docker Network
+- NOTE: Your local machine won't be able to communicate with the Mongo container through the Docker network because its port isn't published in the run command, but the other containers will be able to communicate with it because they're on the same Docker network.
+- In JS code, use container names in place of target container's IP addresses or 'localhost' (assuming the code doesn't execute on the browser, as ReactJS does).
+- The ReactJS frontend container doesn't need to be on the same network because it will connect to the backend's port 80, which is exposed.
+- We're using a named volume to persist Mongo data with `-v data:/data/db`, which will create a named `data` volume that persists data stored in the Mongo container's`/data/db` directory.
+- PASS ENVIRONMENTAL VARIABLES AS THE USERNAME AND PASSWORD IN THE TERMINAL BECAUSE TERMINAL COMMANDS ARE LOGGED AND AGAIN IN THE BACKEND FILE BECAUSE THE CODE WILL BE AVAILABLE IN A CODE REPO!!!
+
+```js
+mongoose.connect(
+	/// USE host.docker.internal IF USING THE SYSTEM'S 
+	/// LOCALHOST NETWORK INSTEAD OF A DOCKER NETWORK
+	//'mongodb://host.docker.internal:27017/course-goals',
+	
+	/// USE CONTAINER NAMES IF USING A DOCKER NETWORK
+	//'mongodb://mongodb-container:27017/course-goals',
+
+	/// Docker Network Container name + Mongo Username & Password
+	'mongodb://myusername:mypassword@mongodb-container:27017/course-goals?authSource=admin',
+	{
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+	},
+	(err) => {
+		if (err) {
+			console.error('FAILED TO CONNECT TO MONGODB');
+			console.error(err);
+		} else {
+			console.log('CONNECTED TO MONGODB');
+			app.listen(80);
+		}
+	}
+);
+```
+
+```js
+// ReactJS Frontend Code
+async function fetchData() {
+	setIsLoading(true);
+	try {
+		/// ReactJS runs in a browser, so don't use
+		/// the target container name here.
+		const response = await fetch('http://localhost/goals');
+		
+		/// We would normally replace 'localhost' with the
+		/// target container, 'goals-node'.
+		//const response = await fetch('http://goals-node/goals');
+		
+		const resData = await response.json();
+		if (!response.ok) {
+			throw new Error(resData.message || 'Fetching the goals failed.');
+		}
+		setLoadedGoals(resData.goals);
+	} catch (err) {
+		setError(
+			err.message ||
+			'Fetching goals failed - the server responsed with an error.'
+		);
+	}
+	setIsLoading(false);
+}
+```
+
+```console
+docker network create network-name
+
+docker run --name mongodb-container --rm -d \
+	-v data:/data/db --network network-name \
+	-e MONGO_INITDB_ROOT_USERNAME=myusername \
+	-e MONGO_INITDB_ROOT_PASSWORD=mypassword \
+	mongo
+
+cd backend
+docker build -t goals-node .
+docker run --name goals-backend --rm -d --network network-name -p 80:80 goals-node
+
+cd ../frontend
+sudo docker build -t goals-react .
+docker run --name goals-frontend --rm -d -p 3000:3000 goals-react
+```
+
