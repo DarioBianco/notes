@@ -806,6 +806,7 @@ docker run --name goals-frontend --rm -d -p 3000:3000 goals-react
 - The ReactJS frontend container doesn't need to be on the same network because it will connect to the backend's port 80, which is exposed.
 - We're using a named volume to persist Mongo data with `-v data:/data/db`, which will create a named `data` volume that persists data stored in the Mongo container's`/data/db` directory.
 - PASS ENVIRONMENTAL VARIABLES AS THE USERNAME AND PASSWORD IN THE TERMINAL BECAUSE TERMINAL COMMANDS ARE LOGGED AND AGAIN IN THE BACKEND FILE BECAUSE THE CODE WILL BE AVAILABLE IN A CODE REPO!!!
+	- `docker run --name some-mongo -e MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongo-root -d mongo`
 
 ```js
 mongoose.connect(
@@ -835,7 +836,8 @@ mongoose.connect(
 ```
 
 ```js
-// ReactJS Frontend Code
+// (Portion of) ReactJS Frontend Code
+
 async function fetchData() {
 	setIsLoading(true);
 	try {
@@ -862,21 +864,503 @@ async function fetchData() {
 }
 ```
 
+
+Reminders: 
+- The Mongo container below should use a bind mount rather than a named volume to persist data. E.g., `-v /my/own/datadir:/data/db` instead of `-v data:/data/db`.
+- To bind an `app` folder in a container to `/Users/username/development/backend` on a local machine, then a bind mount would be created with:
+	- `-v /Users/username/development/backend:/app`
+- Longer internal paths take precedence over shorter ones, so:
+	- `/app/logs` inside the container are not overwritten by logs on the host machine.
+	- `-v /app/node_modules` inside the container is not overwritten by files on the host machine.
+
 ```console
 docker network create network-name
 
-docker run --name mongodb-container --rm -d \
-	-v data:/data/db --network network-name \
+docker run --name mongodb-container \
+	--rm -d \
+	-v data:/data/db \
+	--network network-name \
 	-e MONGO_INITDB_ROOT_USERNAME=myusername \
 	-e MONGO_INITDB_ROOT_PASSWORD=mypassword \
 	mongo
 
 cd backend
-docker build -t goals-node .
-docker run --name goals-backend --rm -d --network network-name -p 80:80 goals-node
+echo use sudo to build on MacOS
+sudo docker build -t goals-node .
+echo Creates a bind mount for code that persists container teardown and 
+echo allows for live source code updates.
+echo Creates a named volume for logs that persists container teardown.
+docker run --name goals-backend \
+	--rm -d \
+	-v /Users/username/development/backend:/app \
+	-v logs:/app/logs \
+	-v /app/node_modules \
+	--network network-name \
+	-p 80:80 \
+	goals-node
 
 cd ../frontend
+echo use sudo to build on MacOS
 sudo docker build -t goals-react .
-docker run --name goals-frontend --rm -d -p 3000:3000 goals-react
+docker run --name goals-frontend \
+	--rm -d \
+	-p 3000:3000 \
+	goals-react
 ```
+
+
+
+#### NOTE: Mongo has changed since the course was released. If you get the following authentication error when trying to connect to Mongo from the backend,
+
+Error message:
+```console
+FAILED TO CONNECT TO MONGODB
+MongoError: Authentication failed.
+    ... {
+  ok: 0,
+  code: 18,
+  codeName: 'AuthenticationFailed'
+```
+
+#### try one of the following:
+
+1. Specify "mongo:5" in the Mongo Dockerfile.
+
+2. Create user in the admin database by setting an additional environmental variable, `MONGO_INITDB_DATABASE`.
+```console
+docker run --name mongodb-container \
+	--rm -d \
+	-v data:/data/db \
+	--network network-name \
+	-e MONGO_INITDB_DATABASE=admin \ # Create user in the admin database
+	-e MONGO_INITDB_ROOT_USERNAME=myusername \
+	-e MONGO_INITDB_ROOT_PASSWORD=mypassword \
+	mongo
+```
+
+3. Set the `MONGO_USERDB_ADMIN_USERNAME` and `MONGO_USERDB_ADMIN_PASSWORD` in the `docker run` command when running mongo, instead of setting `MONGO_INITDB_ROOT_USERNAME` and  `MONGO_INITDB_ROOT_PASSWORD` as follows:
+```console
+docker run --name mongodb-container \
+	--rm -d \ -v data:/data/db \
+	--network network-name \
+	-e MONGO_USERDB_ADMIN_USERNAME=myusername \
+	-e MONGO_USERDB_ADMIN_PASSWORD=mypassword \
+	mongo
+```
+
+4. Manually add user credentials and roles in the running Mongo container by running `mongosh` in the container and calling db.createUser() within the mongo shell as follows:
+
+Linux Terminal
+```console
+docker exec -it mongodb-container mongosh
+```
+
+Mongo Shell
+```mongosh
+use admin;
+db.createUser({
+  user: "myusername",
+  pwd: "mypassword",
+  roles: [{ role: "root", db: "admin" }]
+});
+exit
+```
+
+
+### Section 88: Volumes, Bind Mounts & Polishing for the NodeJS Container
+
+```Dockerfile
+# goals-backend Container's Dockerfile
+FROM node:14
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+EXPOSE 80
+CMD [ "node", "app.js" ]
+```
+
+```console
+docker run --name goals-backend \
+	--rm -d \
+	-v /Users/username/development/backend:/app \
+	-v logs:/app/logs \
+	-v /app/node_modules \
+	--network network-name \
+	-p 80:80 \
+	goals-node
+```
+
+When running the goals-backend container, the application won't reload whenever the source code changes.
+Add `nodemon` to the development dependencies in `package.json` to automatically reload the NodeJS server upon source code changes:
+```json
+{
+	...
+	"scripts": {
+		"start": "nodemon app.js"
+	},
+	...
+	"devDependencies": {
+		"nodemon": "^2.0.4"
+	}
+}
+```
+
+```Dockerfile
+# goals-backend Container's Dockerfile for use with nodemon
+FROM node:14
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+EXPOSE 80
+
+ENV MONGODB_USERNAME=root
+ENV MONGODB_PASSWORD=secret
+# npm start will run nodemon via a script in the package.json file.
+CMD [ "npm", "start" ]
+```
+
+```js
+import dotenv from 'dotenv';
+dotenv.config();
+
+mongoose.connect(
+	`mongodb://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@mongodb-container:27017/course-goals?authSource=admin`,
+	{
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+	},
+	(err) => {
+		if (err) {
+			console.error('FAILED TO CONNECT TO MONGODB');
+			console.error(err);
+		} else {
+			console.log('CONNECTED TO MONGODB');
+			app.listen(80);
+		}
+	}
+);
+```
+#### `-e MONGODB_USERNAME=myusername` will override `ENV MONGODB_USERNAME=root`.
+```console
+docker run --name goals-backend \
+	--rm -d \
+	-v /Users/username/development/backend:/app \
+	-v logs:/app/logs \
+	-v /app/node_modules \
+	--network network-name \
+	-e MONGODB_USERNAME=myusername
+	-p 80:80 \
+	goals-node
+```
+#### .dockerignore 
+- Add to the root folders of the FRONTEND and BACKEND containers.
+```.dockerignore
+node_modules
+Dockerfile
+.git
+```
+
+```console
+docker run --name goals-frontend \
+	--rm -d \
+	-v /path/to/frontend/src:/app/src \
+	-p 3000:3000 \
+	-it \
+	goals-react
+```
+
+
+## Section 6: Docker Compose: Elegant Multi-Container 
+
+### Compose File Configuration
+
+<ol>
+<li>
+Create a `docker-compose.yaml` file in the project folder. The file will describe the multi-container environment.
+</li>
+</ol>
+```sh
+/app
+	/frontend
+	/backend
+	.gitignore
+	docker-compose.yaml
+```
+
+<ol>
+<li value="2">
+Start by defining a Docker Compose Specification `version` on the first line of the file.
+</li>
+</ol>
+<ol>
+<li value ="3">
+Specify the services (i.e. the containers).
+<p>ADD 2 SPACES PER INDENTATION LEVEL</p>
+</li>
+</ol>
+```docker-compose.yaml
+version: "3.8"
+services:
+  mongodb:
+  backend:
+  frontend:
+```
+
+<ol>
+<li value=4>
+Configure the containers (i.e., the services).
+<p>Terminal command implementation (for reference):</p>
+</li>
+</ol>
+```console
+docker run --name mongodb-container \
+	--rm -d \
+	-v data:/data/db \
+	--network network-name \
+	-e MONGO_INITDB_DATABASE=admin \ # Create user in the admin database
+	-e MONGO_INITDB_ROOT_USERNAME=myusername \
+	-e MONGO_INITDB_ROOT_PASSWORD=mypassword \
+	mongo
+```
+<ul>
+</li>
+<ul style="list-style-type: none;">
+<li>
+Docker Compose implementation:
+<p>When you bring services down, they will be removed, so no need for <span style="color: orange;">--rm</span>.</p>
+<p>We can specify <span style="color: orange;">-d</span>, for detached mode, when we run a command to start the services together with the docker-compose file.</p>
+<p>Add comments with <span style="color: orange;">#</span>.</p>
+</li>
+</ul>
+
+#### Project File Structure for Examples Below
+
+```plaintext
+/project-root
+│
+├── /frontend
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── README.md
+│   └── /public
+│       └── index.html
+│
+├── /backend
+│   ├── Dockerfile
+│   ├── /css
+│   ├── /js
+│   ├── /images
+│   └── /src
+│       ├── /components
+│       ├── app.js
+│       ├── index.js
+│       └── index.css
+│
+├── /env
+│   └── mongo.env
+│
+├── docker-commands.txt
+└── docker-compose.yaml
+```
+
+```docker-compose.yaml
+version: "3.8" # You don't need to add the version number anymore.
+
+services:
+  # docker-compose may assign names that are different from the service names,
+  # but you'll still be able to access the services in URLS by referencing
+  # the service names listed in this file.
+  mongodb:
+    image: 'mongo' # The image will be pulled if not on the system
+    
+    volumes:
+	  - data:/data/db
+    # environment:
+      # BOTH ALTERNATIVE SYNTAXES WORK TO SET ENV VARIABLES
+      # KEY:VALUE pairs don't require a "- " before the list item.
+      # MONGO_INITDB_ROOT_USERNAME: myusername
+      # MONGO_INITDB_ROOT_USERNAME=myusername
+    
+    # env_file allows you to move the config out of the docker-compose file.
+    env_file:
+      # Provide path relative to this docker-compose.yaml file.
+	  - ./env/mongo.env
+    
+    # A network may be specified here, but docker will, by default, create an
+    # environment for all the services when using docker-compose and add the
+    # services to the network.
+    netowrk:
+      # E.g. also add to this special network, goals-net, in addition
+      # to the one that docker will create.
+      - goals-net
+
+  backend:
+    # Note images will only be built by docker-compose based on 
+    # whether it detects changes that were made in any layers.
+    # SHORTHAND FORM BUILD
+    # This is the shorthand for setting the build path
+    # This assumes the dockerfile name at the path is "Dockerfile".
+    # build: ./backend
+    
+    # LONG FORM BUILD
+    build:
+      # THIS SERVICE'S IMAGE WILL BE GENERATED FROM THIS PATH
+	  context: ./backend
+	  # Add the Dockerfile file name. 
+      # The backend Dockerfile happens to be named "Dockerfile".
+	  dockerfile: Dockerfile
+	  # How to specify ARGs, if your dockerfile uses them.
+	  # args:
+	    # some-arg: 1
+
+    # Specify exposed/published ports:
+	ports:
+	  - "<host port>:<container internal port>"
+	  - "80:80"
+
+    volumes:
+      # Named volume
+      # Need to be listed again under volumes below.
+	  - logs:/app/logs
+	  # Bind mount
+	  # The host path can be a path relative to docker-compose.yaml.
+	  # It doesn't need to be a full path as when using a run command.
+	  - ./backend:/app
+	  # Anonymous Volume
+	  # Doesn't need to be listed again under volumes below.
+	  - /app/node_modules
+
+    env_file:
+      - ./env/backend.env
+
+    # Specify whether the service (i.e. the container) depends on another
+    # service being up and running for this service to run properly.
+    depends_on:
+      # List the service names that this service depends on.
+      - mongodb
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      # Bind the source code from the host machine onto the container.
+      - ./frontend/src:/app/src
+
+	# Interactive Mode
+	# Even if the service is started in detached mode, the service will 
+	# be able to receive input and start up correctly.
+    # Let service know it needs an input connection (similar to '-i' flag)
+    stdin_open: true
+    # Let service know it needs to attach a terminal (similar to '-t' flag)
+    tty: true
+
+    # We may set the frontend to wait for the backend to start up.
+    # (I think) The frontend and backend services should be able to 
+    # operate independently for the purpose of modularity.
+	depends_on:
+	  - backend
+
+# Any named volumes need to be listed again here
+volumes:
+  # Add the name of the volume followed by a ":" with nothing else.
+  data:
+  logs:
+```
+
+
+```txt
+docker-commands.txt
+---------------------
+Create Network
+---------------------
+
+docker network create goals-net
+
+---------------------
+Run MongoDB Container
+---------------------
+
+docker run --name mongodb \
+  -e MONGO_INITDB_ROOT_USERNAME=max \
+  -e MONGO_INITDB_ROOT_PASSWORD=secret \
+  -v data:/data/db \
+  --rm \
+  -d \
+  --network goals-net \
+  mongo
+
+---------------------
+Build Node API Image
+---------------------
+
+docker build -t goals-node .
+
+---------------------
+Run Node API Container
+---------------------
+
+docker run --name goals-backend \
+  -e MONGODB_USERNAME=max \
+  -e MONGODB_PASSWORD=secret \
+  -v logs:/app/logs \
+  -v /Users/maximilianschwarzmuller/development/teaching/udemy/docker-complete/backend:/app \
+  -v /app/node_modules \
+  --rm \
+  -d \
+  --network goals-net \
+  -p 80:80 \
+  goals-node
+
+---------------------
+Build React SPA Image
+---------------------
+
+docker build -t goals-react .
+
+---------------------
+Run React SPA Container
+---------------------
+
+docker run --name goals-frontend \
+  -v /Users/maximilianschwarzmuller/development/teaching/udemy/docker-complete/frontend/src:/app/src \
+  --rm \
+  -d \
+  -p 3000:3000 \
+  -it \
+  goals-react
+
+---------------------
+Stop all Containers
+---------------------
+
+docker stop mongodb goals-backend goals-frontend
+```
+
+
+> [!NOTE]
+> Installing Docker Compose on Linux
+> 
+> On macOS and Windows, you should already have Docker Compose installed - it's set up together with Docker there.
+> 
+> On Linux machines, you need to install it separately.
+> 
+> These steps should get you there:
+> 
+> 1. `sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose`
+> 
+> 2. `sudo chmod +x /usr/local/bin/docker-compose`
+> 
+> 3. `sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose`
+> 
+> 4. to verify: `docker-compose --version`
+> 
+> Also see: [https://docs.docker.com/compose/install/](https://docs.docker.com/compose/install/)
+
+Start & Stop Services with Docker Compose
+- `docker-compose up`
+- `docker-compose down`
 
