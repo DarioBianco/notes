@@ -1465,11 +1465,11 @@ services:
       context: ./dockerfiles
       dockerfile: php.dockerfile
     volumes:
-	  # Tell docker to delay updating host machine files to
-	  # reflect the corresponding bind mount files.
-	  # Files will be updated in batchs rather than
-	  # instantly reflecting the changes (as an optimization)
-	  # that improved performance.)
+# Tell docker to delay updating host machine files to
+# reflect the corresponding bind mount files.
+# Files will be updated in batchs rather than
+# instantly reflecting the changes (as an optimization)
+# that improved performance.)
       - ./src:/var/www/html:delegated
 ```
 
