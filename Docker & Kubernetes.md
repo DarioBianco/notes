@@ -428,6 +428,7 @@ Build an image with the name of the repository (i.e., image name) you plan to us
 		- `docker volume rm <volume name>`
 		- `docker volume prune`
 - Bind Mounts (Managed by You)
+	- ### Bind mounts are for devlopment, not for production, because source file on you host machine will not be available when you deploy a container!!!
 	- Useful for development. Changes to source code files on localhost that are at bind mounts would be reflected within containers.
 	- The folder/path on you machine is specified.
 	- Great for persistent data that is editable by you.
@@ -1173,6 +1174,9 @@ services:
   # docker-compose may assign names that are different from the service names,
   # but you'll still be able to access the services in URLS by referencing
   # the service names listed in this file.
+  # The name here is a "Service Name", which defaults to 
+  # <project folder name>_<Service Name>_<incrementing number>.
+  # You can separately specify a container name with `container_name: <name>`
   mongodb:
     image: 'mongo' # The image will be pulled if not on the system
     
@@ -1362,5 +1366,169 @@ docker stop mongodb goals-backend goals-frontend
 
 Start & Stop Services with Docker Compose
 - `docker-compose up`
+- `docker-compose up -d` for Detached mode
 - `docker-compose down`
+
+While Starting Services, Force Rebuild of images that are built in the docker-compose.yaml file
+- `docker-compose up --build`
+
+Build without Starting Services
+- `docker-compose build`
+
+
+## Section 7: Working with "Utility Containers" & Executing Commands In Containers
+
+*Note: The term 'Utility Container' is not an official term. It is used in the course to describe a use-case for containers.*
+
+### Example Utility Container:
+
+
+### Run a utility-container for development without installing dependencies on your machine.
+*The following allows an NPM project to be created without installing Node or NPM packages on the host machine.*
+```Dockerfile
+FROM node:14-alpine
+WORKDIR /app
+# That's it...
+# Run a container with this image to allow a user
+# full control to run commands against this image.
+
+# NOTE The `npm start` CMD below would be overwritten by 
+# `npm init` if a command like the following run command was
+# executed:
+#	`docker run node-util npm init`
+#
+# CMD ["npm", "start"]
+
+# `npm init` would be appended to the list of commands to
+# run after the command(s) specified in the entrypoint.
+# ENTRYPOINT ["executable command"]
+```
+
+Run the image created by the Dockerfile, binding it to your dev folder:
+- `docker run -it -v /path/to/dev/folder/on/host:/path/in/container <node container name or ID> npm init`
+- The `-it` flag is needed for the terminal to remain connected to the container so that you can answer the npm project initialization prompts in the terminal.
+Example:
+- `docker run -it -v /Users/db/docker-projects/node-util/:/app node-util npm init`
+- `docker run -it -v /Users/db/docker-projects/node-util/:/app node-util npm install express` --save <-- To install a single package and save it to package.json as a dependency (e.g., express).
+- `docker run -it -v /Users/db/docker-projects/node-util/:/app node-util npm install` <-- to install all dependencies from package.json.
+*A package.json file will be created on your host machine.*
+
+
+#### ENTRYPOINT
+```Dockerfile
+FROM node:14-alpine
+WORKDIR /app
+ENTRYPOINT ["npm"]
+```
+No need to prepend 'init' or 'install' with `npm` when using `npm` as the ENTRYPOINT.
+- `docker run -it -v /Users/db/docker-projects/node-util/:/app node-util init`
+
+Alternatively to running a `docker run` command, use a docker-compose.yaml file:
+```yaml
+services:
+  npm:
+    build: ./
+    stdin_open: true
+    tty: true
+    volumnes:
+      - ./:/a
+    # entrypoint: ["npm"]
+```
+
+The above yaml file will only run the command `npm` after installing node, which is incomplete. 
+- `docker-compose up <command>`
+- `docker-compose up init` # runs `npm init`
+
+`docker-compose up` is meant to bring up services within a docker-compose.yaml file.
+
+A `run` or `exec` command may be used with docker-compose instead of `up`:
+Run a single service by the service name appended to the ENTRYPOINT:
+- `docker-compose run <option>`
+- `docker-compose run --rm init` # runs `npm init`
+- `docker-compose exec init` # runs `npm init`
+*Note: `docker-compose run` or `exec` do not remove containers in the same way `docker-compose up` does.*
+
+
+#### 109. Utility Containers, Permissions & Linux
+- https://vsupalov.com/docker-shared-permissions/
+
+
+## Section 8: A More Complex Setup: A Laravel & PHP Dockerized Project
+
+
+
+```yaml
+services:
+  ...
+  php:
+    build:
+      context: ./dockerfiles
+      dockerfile: php.dockerfile
+    volumes:
+	  # Tell docker to delay updating host machine files to
+	  # reflect the corresponding bind mount files.
+	  # Files will be updated in batchs rather than
+	  # instantly reflecting the changes (as an optimization)
+	  # that improved performance.)
+      - ./src:/var/www/html:delegated
+```
+
+```php.Dockerfile
+FROM php:8.2.4-fpm-alpine
+WORKDIR /var/www/html
+COPY src .
+RUN docker-php-ext-install pdo pdo_mysql
+RUN addgroup -g 1000 laravel && adduser -G laravel -g laravel -s /bin/sh -D laravel
+USER laravel
+```
+
+
+### Bring up specific docker-compose services:
+- `docer-compose up -d <service1> <service2>`
+- If ervice1 depends on service2, then service2 doesn't need to be added to the up command for both services to start.
+
+### Force Docker to rebuild all layers
+- `docer-compose up -d --build <service1>`
+
+
+## Section 9: Deploying Docker Containers
+
+Google "Docker Hosting Providers"
+
+Largest Providers
+- AWS
+- Microsoft Azure
+- Google Cloud
+
+
+> [!NOTE]
+> #### Important: Installing Docker on a Virtual Machine
+> In the next lecture, we'll install Docker on a virtual EC2 instance.
+> 
+> Please note that the following command (which is used in the next lecture) will unfortunately **not work anymore**:
+> ```console
+> amazon-linux-extras install docker
+> ```
+> 
+> **Instead, use this approach / these commands:**
+> ```console
+> sudo yum update -y
+> sudo yum -y install docker
+> sudo service docker start
+> sudo usermod -a -G docker ec2-user
+> ```
+> 
+> Make sure to **log out + back in** after running these commands.
+> Once you logged back in, run this command:
+> ```console
+> sudo systemctl enable docker
+> ```
+> 
+> Thereafter, you can check whether Docker is available by running:
+> ```console
+> docker version
+> ```
+
+
+ You can follow the Linux setup instructions you find on the official Docker page: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/) (under "Server").
 
