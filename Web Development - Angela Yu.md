@@ -189,7 +189,7 @@ Border: 10px solid black
 
 ### Level of importance of a CSS Rule:
 
-1) Position : Appears higher or lower relative to other rules.
+1. Position : Appears higher or lower relative to other rules.
 
    ```css
    /*Later rules overrule previous rules, so the applied color would be blue.*/
@@ -199,7 +199,7 @@ Border: 10px solid black
    }
    ```
 
-2) Specificity: 
+2. Specificity: 
 
    ```css
    <li id="first-id" class="first-class" draggable>
@@ -218,7 +218,7 @@ Border: 10px solid black
    /*The li text would be orange.*/
    ```
 
-3) Type:
+3. Type:
 
    1) External Styles (Will be applied first.)
    2) Internal Styles
@@ -233,7 +233,7 @@ Border: 10px solid black
    <h1 style="">Hello</h1>
    ```
 
-4) Importance
+4. Importance
 
    ```css
    /* The important keyword will apply a rule for the property. Position, specificity, and type rules will be overridden for important parameters.
@@ -471,6 +471,7 @@ May be set by % or other units.
 
 
 
+
 #### CSS Flexbox
 
 Allows the creation of **1-dimensional** layouts. Section 9 will delve deeper into how flexbox works.
@@ -520,6 +521,7 @@ Allows the creation of **1-dimensional** layouts. Section 9 will delve deeper in
     <div class="card" style="background-color: blue; border: 30px solid white; height: 100px; flex: 1;">3</div>
     <div class="card" style="background-color: blue; border: 30px solid white; height: 100px; flex: 1;">4</div>
 </div>
+
 
 
 
@@ -657,6 +659,7 @@ The container height is set so that the vertical stretch and alignment is clear.
     <div style="height:50px; width:100px; background-color: orange; align-self: flex-end; text-align: center;">align-self</div>
 </div>
 
+
 **align-content**: similar to align-items, but only works when flex-wrap is set to **wrap**.
 
 **align-self**: allows alignment of element independent of other elements
@@ -695,6 +698,7 @@ The grow and shrink property values are totaled across all flexed elements withi
     <div style="flex: 2 1 0; background-color:lightgrey; text-align:center;">flex-grow: 2 [2/6]</div>
     <div style="flex: 3 1 0; background-color:grey; text-align:center;">flex-grow: 3 [3/6]</div>
 </div>
+
 
 
 ## Section 10 - CSS Grid
@@ -786,6 +790,7 @@ If there are fewer grid elements than a grid specifies, the contents will only t
     <div style="background-color:grey; text-align:center;">5</div>
 </div>
 
+
 Any elements that won't fit in the specified grid-size will take up as much height as it needs and while aligning with existing columns.
 
 <div style="display: grid; grid-template-rows: repeat(2, 50px); grid-template-columns: repeat(3, 50px); justify-content:center;">
@@ -797,6 +802,7 @@ Any elements that won't fit in the specified grid-size will take up as much heig
 	<div style="background-color:lightgrey; text-align:center;">6</div>
     <div style="background-color:grey; text-align:center;">7</div>
 </div>
+
 
 To specify height of excess elements, use the grid-auto-height property.
 
@@ -816,6 +822,7 @@ To specify height of excess elements, use the grid-auto-height property.
     <div style="background-color:grey; text-align:center;">3</div>
     <div style="background-color:lightgrey; text-align:center;">4</div>
 </div>
+
 
 ### Grid Placement
 
@@ -1199,11 +1206,11 @@ Style Object Properties:
 
 ### Separation of Concerns: Structures vs Style vs Behavior
 
-1) Use CSS to apply styles by assigning classes, IDs, or tag names to elements.
+1. Use CSS to apply styles by assigning classes, IDs, or tag names to elements.
 
    To modify element styles,  JS should add/remove CSS selector(s) to elements.
 
-2) Use JS to modify behavior.
+2. Use JS to modify behavior.
 
 Separation of concerns simplifies troubleshooting:
 
@@ -2528,6 +2535,7 @@ app.delete(`/jokes/:id`, async (req, res) => {
 #### DELETE (all)
 
 ##### NOTE: DON'T PASS AN API KEY AS A QUERY PARAM AS SHOWN!!! Authorization will be elaborated on later in the course.
+
 ```js
 //8. DELETE All jokes
 app.delete(`/all`, async (req, res) => {
@@ -2874,7 +2882,7 @@ ORDER BY id ASC LIMIT 100;
 
 - Right-click on a table name from the left pane.
 - Select `Properties...`
--  Navigate to the `Columns` tab.
+- Navigate to the `Columns` tab.
 - Replace the field name to rename.
 - Click `Save`.
 
@@ -3192,6 +3200,7 @@ ALTER TABLE contact_details
 
 
 ##### Unique Constraint across fields
+
 As an example of where this is useful: If tracking countries user's have visited with the fields country_code and user_id, the constraint UNIQUE (country_code,  user_id) would prevent a country code from being repeated for each user. Different users could list the same country code to indicate they also visited the same country.
 
 ```postgresql
@@ -3727,17 +3736,17 @@ React requires the following npm packages:
 The following code will replace the div, having an ID of "root", in the HTML template above with **Hello World!**.
 
  ```react
- //var React = require("react");
- //var ReactDOM = require("react-dom");
- import React from "react";
- import ReactDOM from "react-dom";
- 
- // NOTE: HTML is NOT to be placed in quotes. 
- //       This file is parsed and the HTML is compiled/converted into JavaScript.
- //       The react modules, imported above, are what allows this functionality.
- // ReactDOM.render(<What to show>, <where to show it>);
- ReactDOM.render(<h1>Hello World!</h1>, document.querySelector("#root"));
- // ReactDOM.render(<h1>Hello World!</h1>, root); // Simply entering the element ID seems to work too...
+//var React = require("react");
+//var ReactDOM = require("react-dom");
+import React from "react";
+import ReactDOM from "react-dom";
+
+// NOTE: HTML is NOT to be placed in quotes. 
+//       This file is parsed and the HTML is compiled/converted into JavaScript.
+//       The react modules, imported above, are what allows this functionality.
+// ReactDOM.render(<What to show>, <where to show it>);
+ReactDOM.render(<h1>Hello World!</h1>, document.querySelector("#root"));
+// ReactDOM.render(<h1>Hello World!</h1>, root); // Simply entering the element ID seems to work too...
  ```
 
 
@@ -4128,7 +4137,7 @@ console.log(findIndex); // logs index 1
 
 > Single Responsibility Principle
 
-### 306 React Hooks - useState
+### 304 React Hooks - useState
 
 ```jsx
 //import React from "react";
@@ -4161,6 +4170,53 @@ function App() {
 }
 
 export default App;
+```
+
+
+
+### 306 Javascript ES6 Object & Array Destructuring
+
+
+
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+
+```js
+const animals = [
+  // Index 0
+  {
+    name: "cat",
+    sound: "meow",
+    feedingRequirements: {
+      food: 2,
+      water: 3
+    }
+  },
+  // Index 1
+  {
+    name: "dog",
+    sound: "woof"
+  }
+]
+// Use square brackets to destructure arrays.
+// Variable names are arbitrary.
+const [cat, dog] = animals;
+
+// Use curly braces to destructure objects
+// Variable names must match object property names.
+const {name, sound} = cat;
+
+// To rename the variables from object property names
+// add a colon and the new variable name after the
+// the property you want to rename.
+// E.g. const {oldPropertyName: newPropertyName} = object;
+const {name: catName, sound: catSound} = cat;
+
+// Set a default in the event that the property is undefined.
+const {name = "Fluffy"} = cat;
+
+// Destructure nested objects in one line
+const {name, sound, feedingRequirements: {food, water}} = cat;
+
 ```
 
 
@@ -4226,7 +4282,7 @@ https://legacy.reactjs.org/docs/forms.html#controlled-components
 
 > In HTML, form elements such as `<input>`, `<textarea>`, and `<select>` typically maintain their own state and update it based on user input. In React, mutable state is typically kept in the state property of components, and only updated with [`setState()`](https://legacy.reactjs.org/docs/react-component.html#setstate).
 >
->  We can combine the two by making the React state be the “single source of truth”. Then the React component that renders a form also controls what happens in that form on subsequent user input. An input form element whose value is controlled by React in this way is called a “controlled component”.
+> We can combine the two by making the React state be the “single source of truth”. Then the React component that renders a form also controls what happens in that form on subsequent user input. An input form element whose value is controlled by React in this way is called a “controlled component”.
 
  
 
@@ -4317,6 +4373,18 @@ function App() {
         [name]: value // You need the backets or the key name will be 'name' rather than 'fName', 'lName', or 'email'.
       }
     });
+    
+    // Alternative (terse) way to return the spread-syntax version
+    // of the contact object to set the contact.
+    // ---
+    // The parenthates that wrap the curly braces are used to tell 
+    // JS that the contents inside the curly braces is an object, not
+    // the body of a funciton.
+    // ---
+    // It's nice to know this is possible, but the above spread-syntax
+    // version is preferrred.
+    setContact((prevValue) => ({...prevValue, [name]: value });
+    
   }
 
   return (
