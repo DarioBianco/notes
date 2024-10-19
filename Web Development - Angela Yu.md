@@ -736,7 +736,7 @@ The grow and shrink property values are totaled across all flexed elements withi
     /* Fit Content after the 100px on the left */
     grid-template-columns: 100px auto;
     /* 100% of the browser window height under the 100px */
-	grid-template-rows: 100px auto;
+		grid-template-rows: 100px auto;
 }
 ```
 
@@ -747,8 +747,8 @@ The grow and shrink property values are totaled across all flexed elements withi
     display: grid;
     gap: 0;
     /* Grow & shrink proportionally based on window size */
-	grid-template-columns: 1fr 2fr;
-	grid-template-rows: 1fr 2.5fr;
+		grid-template-columns: 1fr 2fr;
+		grid-template-rows: 1fr 2.5fr;
 }
 ```
 
@@ -759,7 +759,7 @@ Defines how a grid is responsive.
 ```css
 .container {
     display: grid;
-	grid-template-rows: 200px 400px;
+		grid-template-rows: 200px 400px;
     /*Specify min & max column widths*/
     grid-template-columns: 200px minmax(400px,800px);
 }
@@ -771,7 +771,7 @@ Defines how a grid is responsive.
 .container {
     display: grid;
     /* Creat an 2x3 grid */
-	grid-template-rows: repeat(2, 50px);
+		grid-template-rows: repeat(2, 50px);
     grid-template-columns: repeat(3, 50px);
 }
 ```
@@ -3697,3 +3697,697 @@ app.use(
 Auth Code: One time access
 
 Access Token: Extended access (E.g., one year)
+
+## Section 36 - React.js
+
+This HTML template below is all that's needed for a React App. All of the UI development is handled through the index.js script, which will replace elements on the page.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>React App</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script src="../src/index.js" type="text/javascript"></script>
+  </body>
+</html>
+```
+
+
+
+React requires the following npm packages:
+
+- `react`
+- `react-dom`
+
+The following code will replace the div, having an ID of "root", in the HTML template above with **Hello World!**.
+
+ ```react
+ //var React = require("react");
+ //var ReactDOM = require("react-dom");
+ import React from "react";
+ import ReactDOM from "react-dom";
+ 
+ // NOTE: HTML is NOT to be placed in quotes. 
+ //       This file is parsed and the HTML is compiled/converted into JavaScript.
+ //       The react modules, imported above, are what allows this functionality.
+ // ReactDOM.render(<What to show>, <where to show it>);
+ ReactDOM.render(<h1>Hello World!</h1>, document.querySelector("#root"));
+ // ReactDOM.render(<h1>Hello World!</h1>, root); // Simply entering the element ID seems to work too...
+ ```
+
+
+
+React uses **Babel**, a JavaScript compiler that takes more modern versions of JS code and compiles it into a more universally compatible version.
+
+https://babeljs.io/
+
+
+
+The `render` method can only accept a single root tag. For example, `<h1>text</h1>` includes a single root tag, the h1 tag, and is acceptable, but `<h1>text</h1><p>text</p>` has two root tags, the h1 tag and p tag, so the render method won't work.
+
+
+
+Populate HTML template content with JS variables:
+
+```react
+const fName = "Angela";
+const lName = "Yu";
+ReactDOM.render(
+  <h1>
+    Hello {fName} {lName}!
+  </h1>,
+  document.getElementById("root")
+);
+```
+
+
+
+```react
+import React from "react";
+import ReactDOM from "react-dom";
+
+const name = "Dario Bianco";
+const currentYear = new Date().getFullYear();
+
+ReactDOM.render(
+  <div>
+    <p>Created by {name}.</p>
+    <p>© {currentYear} {name}</p>
+  </div>,
+  root
+);
+```
+
+
+
+### Section 284 - JSX Attributes and Styling React Elements
+
+The hardcoding the attribute `class` in an HTML element in `<h1 class="heading">My Favourite Foods</h1>`, will throw a warning because the proper attribute name for `class` is `className`. Replacing `class` with `className` will clear the warning.
+
+```react
+import React from "react";
+import ReactDOM from "react-dom";
+
+ReactDOM.render(
+  <div>
+    <h1 className="heading"  contentEditable="true" spellCheck="false" >My Favourite Foods</h1>
+  </div>,
+  document.getElementById("root")
+);
+```
+
+HTML Global Attributes - https://www.w3schools.com/tags/ref_standardattributes.asp
+
+When setting HTML elements' HTML Global Attributes in React JSX files, use camelcase for the attribute names even though the HTML Global Attribute names are all lowercase. E..g., `contenteditable` becomes `contentEditable` and `font-size` become `fontSize`.
+
+RECOMMENDATION
+
+- Apply styling for HTML elements **through classes**, that are defined in CSS files.
+- Use **kabob-case** for class names.
+
+#### JSX vs JavaScript
+
+The error, `Uncaught SyntaxError: Unexpected token '<'`, in the browser console results from the browser not recognizing the '<' symbol in the index.js file. The browser doesn't know that the JS file is a JSX file that includes HTML elements.
+
+Change "text/javascript" in the script tag to "text/JSX" to clear the error.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>React App</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script src="../src/index.js" type="text/JSX"></script>
+  </body>
+</html>
+```
+
+
+
+### Section 285 - Inline Styling for React Elements
+
+```react
+ReactDOM.render(
+  <h1 style={{ color: "red" }}>Hello World!</h1>,
+  document.getElementById("root")
+);
+```
+
+CSS style values need to be strings and spaces need to be preserved between colons and the value strings.
+
+```react
+import React from "react";
+import ReactDOM from "react-dom";
+
+const customStyle = {
+  color: "red",
+  fontSize: "20px",
+  border: "1px solid black",
+};
+
+customStyle.color = "blue";
+customStyle.textDecoration = "underline";
+
+ReactDOM.render(
+  <h1 style={customStyle}>Hello World!</h1>,
+  document.getElementById("root")
+);
+```
+
+
+
+### Section 287 - React Components
+
+Airbnb React/JSX Style Guide - https://github.com/airbnb/javascript/tree/master/react
+
+React functions names should be in Pascal Case.
+
+```console
+project-root/
+│
+├── src/
+    ├── index.js
+    ├── components/
+        ├── App.jsx
+        ├── List.jsx
+        └── Heading.jsx
+```
+
+index.js
+
+```react
+import React from "react";
+import ReactDOM from "react-dom";
+import App from "./components/App";
+
+ReactDOM.render(<App />, document.getElementById("root"));
+
+```
+
+App.jsx
+
+```jsx
+import React from "react";
+import Heading from "./Heading";
+import List from "./List";
+
+function App() {
+  return (
+    <div>
+      <Heading />
+      <List />
+    </div>
+  );
+}
+
+export default App;
+
+```
+
+Heading.jsx
+
+```JSX
+import React from "react";
+
+function Heading() {
+  return <h1>My Favourite Foods</h1>;
+}
+
+export default Heading;
+```
+
+List.jsx
+
+```jsx
+import React from "react";
+
+function List() {
+  return (
+    <ul>
+      <li>Bacon</li>
+      <li>Jamon</li>
+      <li>Noodles</li>
+    </ul>
+  );
+}
+
+export default List;
+```
+
+
+
+### Section 288 - React Components Practice
+
+projectRoot/public/index.html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>JSX</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script src="../src/index.js" type="text/JSX"></script>
+  </body>
+</html>
+
+```
+
+projectRoot/src/style.css
+
+```css
+.heading {
+  border: 5px solid black;
+}
+```
+
+projectRoot/src/index.js
+
+```jsx
+//Create a React app from scratch.
+import React from "react";
+import reactDom from "react-dom";
+import App from "./components/App";
+// This styles.css import is redundant because
+// the public style.css file is linked to in
+// the index.html file header.
+// import "./../public/styles.css";
+
+reactDom.render(<App />, root);
+// reactDom.render(<App />, document.getElementById("root"));
+```
+
+projectRoot/src/components/App.jsx
+
+```jsx
+//Create a React app from scratch.
+import React from "react";
+import Heading from "./Heading";
+
+function App() {
+  return (
+    <div>
+      <Heading />
+    </div>
+  );
+}
+
+export default App;
+```
+
+projectRoot/src/components/Heading.jsx
+
+```jsx
+//Create a React app from scratch.
+import React from "react";
+
+function Heading() {
+  const now = new Date();
+  // now.setHours(11);
+  // now.setHours(13);
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const noon = new Date();
+  noon.setHours(12, 0, 0, 0);
+
+  const sixPM = new Date();
+  sixPM.setHours(18, 0, 0, 0);
+
+  let greeting;
+  const customStyle = {};
+
+  if (now.getTime() < noon.getTime()) {
+    //Show a single h1 that says "Good morning" if between midnight and 12PM.
+    greeting = "Good Morning";
+    customStyle.color = "red";
+  } else if (now.getTime() < sixPM.getTime()) {
+    //or "Good Afternoon" if between 12PM and 6PM.
+    greeting = "Good Afternoon";
+    customStyle.color = "green";
+  } else {
+    //or "Good evening" if between 6PM and midnight.
+    greeting = "Good evening";
+    customStyle.color = "blue";
+  }
+
+  //Apply the "heading" style in the styles.css
+  //Dynamically change the color of the h1 using inline css styles.
+  //Morning = red, Afternoon = green, Night = blue.
+
+  return (
+    <h1 className="heading" style={customStyle}>
+      {greeting}
+    </h1>
+  );
+}
+
+export default Heading;
+
+```
+
+
+
+### 293 - React Props
+
+Properties, or props, are like function attributes, but for React components.
+
+You can't define custom props, you're limited to HTML element attributes. 
+
+- E.g., some attributes can be found here: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#attributes
+
+```jsx
+<div>
+  <Card
+    className="my-style-APPLYING A CLASS HERE (DIRECTLY) WON'T WORK BECAUSE CLASSNAME IS ACCESED VIA PROPS.CLASSNAME"
+    name="Beyonce"
+    src="https://..."
+    tel="+123 456 789"
+    email="b@beyonce.com"
+  />
+</div>
+```
+
+```jsx
+import React from "react";
+
+function Card(props) {
+  console.log(props); // prints `Object {name: "Beyonce"}` in browser console.
+  
+  return (
+    <div className="my-style">
+      <h2>{props.name}</h2>
+      <img src={props.src} alt="avatar image" />
+      <p>{props.tel}</p>
+      <p>{props.email}</p>
+    </div>
+  );
+}
+```
+
+
+
+### 298 - Javascript ES6 Map/Filter/Reduce
+
+
+
+```js
+var numbers = [ 3, 56, 2, 48, 5];
+// Find the first item that matches from an array
+const newNumber = numbers.find(function (num) {
+  return number > 3;
+})
+console.log(newNumber); // logs 56
+```
+
+
+
+```js
+var numbers = [ 3, 56, 2, 48, 5];
+// Find the first item that matches from an array
+const findIndex = numbers.findIndex(function (num) {
+  return number > 3;
+})
+console.log(findIndex); // logs index 1
+```
+
+
+
+> Single Responsibility Principle
+
+### 306 React Hooks - useState
+
+```jsx
+//import React from "react";
+import React, { useState } from "react";
+
+function App() {
+  //const state = React.useState(0);
+  //const state = useState(0);	// The value in the parenthasis is the default value for the state.
+  //console.log(state[0]);
+  
+  // Destructuring useState will automatically get the first element.
+  // count, the first element, is the variable that we set.
+  // setCount is a callback, called a stateful setter, that sets the
+  // state of the variable, count.
+  const [count, setCount] = useState(0);
+  
+  // Destructuring Example
+  const [red, green, blue] = [9, 132, 227];
+  
+  function increase() {
+    setCount(count + 1);
+  }
+  return (
+    <div className="container">
+    	<!--<h1>{state[0]}</h1>-->
+      <h1>{count}</h1>
+      <button onClick={increase}>+</button>
+    </div>
+  );
+}
+
+export default App;
+```
+
+
+
+### 309 React Forms
+
+```jsx
+import React, { useState } from "react";
+
+function App() {
+  const [name, setName] = useState("");
+  const [heading, setHeading] = useState("");
+
+  function handleChange(event) {
+    // event is the event that triggered the onChange event.
+    // target is the elements that triggered the event.
+    // value is a property of the target.
+    setName(event.target.value);
+    console.log(event.target.value);
+  }
+
+  function handleClick(event) {
+    event.preventDefault();
+    setHeading(name);
+  }
+
+  // We make the React state be the “single source of truth”
+  // by setting value={name} in the input element.
+  // Because the value attribute is set on our form
+  // element, the displayed value will always be this.state.value
+  return (
+    <div className="container">
+      <h1>Hello {name}</h1>
+      <input
+        onChange={handleChange}
+        type="text"
+        placeholder="What's your name?"
+        value={name}
+      />
+      <button>Submit</button>
+
+      <hr/>
+      <form onSubmit={handleClick}>
+        <h1>Hello {heading}</h1>
+        <input
+          onChange={handleChange}
+          type="text"
+          placeholder="What's your name?"
+          value={name}
+        />
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  );
+}
+export default App;
+
+```
+
+
+
+https://legacy.reactjs.org/docs/forms.html#controlled-components
+
+> In HTML, form elements such as `<input>`, `<textarea>`, and `<select>` typically maintain their own state and update it based on user input. In React, mutable state is typically kept in the state property of components, and only updated with [`setState()`](https://legacy.reactjs.org/docs/react-component.html#setstate).
+>
+>  We can combine the two by making the React state be the “single source of truth”. Then the React component that renders a form also controls what happens in that form on subsequent user input. An input form element whose value is controlled by React in this way is called a “controlled component”.
+
+ 
+
+### 311 Changing Complex State
+
+```jsx
+import React, { useState } from "react";
+
+function App() {
+  const [fullName, setFullName] = useState({
+    fName: "",
+    lName: ""
+  });
+
+  function handleChange(event) {
+    const { value, name } = event.target;
+
+    // Don't try to access the event object within a stateful setter
+    setFullName(prevValue => {
+      if (name === "fName") {
+        return {
+          fName: value,
+          lName: prevValue.lName
+        };
+      } else if (name === "lName") {
+        return {
+          fName: prevValue.fName,
+          lname: value
+        };
+      }
+    });
+  }
+
+  return (
+    <div className="container">
+      <h1>
+        Hello {fullName.fName} {fullName.lName}
+      </h1>
+      <form>
+        <input
+          name="fName"
+          onChange={handleChange}
+          placeholder="First Name"
+          value={fullName.fName}
+        />
+        <input
+          name="lName"
+          onChange={handleChange}
+          placeholder="Last Name"
+          value={fullName.lName}
+        />
+        <button>Submit</button>
+      </form>
+    </div>
+  );
+}
+
+export default App;
+
+```
+
+
+
+### 312 Changing Complex State Practice
+
+```jsx
+import React, { useState } from "react";
+function App() {
+  const [contact, setContact] = useState({
+    fName: "",
+    lName: "",
+    email: "",
+  });
+
+  function updateContact(event) {
+    console.log(event.target.value);
+
+    const { value, name } = event.target;
+
+    setContact((prevValue) => {
+      //return {
+      //  fName: name == "fName" ? value : prevValue.fName,
+      //  lName: name == "lName" ? value : prevValue.lName,
+      //  email: name == "email" ? value : prevValue.email,
+      //};
+      return {
+        ...prevValue,
+        [name]: value // You need the backets or the key name will be 'name' rather than 'fName', 'lName', or 'email'.
+      }
+    });
+  }
+
+  return (
+    <div className="container">
+      <h1>
+        Hello {contact.fName} {contact.lName}
+      </h1>
+      <p>{contact.email}</p>
+      <form>
+        <input
+          name="fName"
+          placeholder="First Name"
+          onChange={updateContact}
+          value={contact.fName}
+        />
+        <input
+          name="lName"
+          placeholder="Last Name"
+          onChange={updateContact}
+          value={contact.lName}
+        />
+        <input
+          name="email"
+          placeholder="Email"
+          onChange={updateContact}
+          value={contact.email}
+        />
+        <button>Submit</button>
+      </form>
+    </div>
+  );
+}
+export default App;
+
+```
+
+
+
+> ==**Parallel Typing**==
+>
+> To type the same thing on separate lines simultaneously:
+>
+> - Hold down the option key (Mac) or the ALT key (Windows) in VS Code,
+> - Click on the locations you would like to start typing, and
+> - Type. **Characters will be added in all the locations you clicked as you type.**
+
+
+
+
+
+https://stackoverflow.com/questions/11508463/javascript-set-object-key-by-variable?noredirect=1&lq=1
+
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
+
+
+
+```js
+const citrus = ["Lime", "Lemon", "Orange"];
+const fruits = ["Apple", ...citrus, "Banana", "Coconut"];
+
+const fullName = {
+  fName: "James",
+  lName: "Bond"
+};
+
+const user = {
+  ...fullName,
+  id: 1,
+  username: "jamesbond007"
+};
+
+console.log(user);
+```
+
