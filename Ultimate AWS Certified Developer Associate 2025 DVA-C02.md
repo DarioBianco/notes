@@ -711,7 +711,7 @@ Go to AWS Console > EC2 > Snapshots > Recycle Bin button
 Amazon Machine Image:
 - A customized EC2 instance.
 - You can add (pre-package) your own software, configuration, operating system, monitoring.
-- Are built for a specific region, but may be copied to other regions.
+- Are built for a specific region, but ==may be copied to other regions==.
 - you may launch EC2 instances from:
 	- A Public AMI: AWS provided.
 		- E.g., Amazon Linux 2 AMI or the Amazon Linux 2023 AMI
@@ -780,5 +780,251 @@ Launching a new EC2 instance based on the AMI we created should take less time t
 echo "<h1>Hello World from $(hostname -f)</h1>" > /var/www/html/index.html
 ```
 
+## Subsection 52. EC2 Instance Store
 
-Stopped taking notes after subsection 51
+- EBS Volumes are network drives with good, but "limited", performance.
+- If you ned more performant storage, you may use EC2 Instance Store, a hardware disk drive.
+- EC2 Instance Store (ultimately) connects a hardware disk to your instance.
+- EC2 Instance Store lose their storage if they are stopped (ephemeral).
+- Recommended for use as a buffer, cache, scratch data, temporary content.
+- Risk of data loss if hardware fails
+- BACKUP AND REPLICATION ARE YOUR RESPONSIBILITY
+
+Performance:
+
+| Instance Size | 100% Random Read IOPS | Write IOPS  |
+| ------------- | --------------------- | ----------- |
+| i3.16xlarge   | 3.3 million           | 1.4 million |
+Compared to 32k IOPS in an EBS gp2 volume.
+
+## Subsection 53. EBS Volume Types
+
+EBS Volumes come in 6 types:
+1. gp2/gp3 (SSD):
+	1. General Purpose SSD volume that balances price and performance for a wide variety of workloads.
+	2. Can be used as **boot volumes**.
+	3. Cost effective, low-latency
+	4. May be used as System Boot Volumes, Development, and Test Environments.
+	5. 1 GiB -16 TiB
+	6. gp3:
+		1. Baseline of 3,000 IOPS and throughput of 125 MiB/s
+		2. Can increase IOPS up to 16,000 and throughput up to 1,000 MiB/s (independently)
+	7. gp2:
+		1. small gp2 volumes can burst IOPS to 3,000
+		2. Size of the volume and IOPS are **linked**, max IOPS is 16,000
+		3. 3 IOPS per GB, means at 5,334 GB we are at the max IOPS.
+2. io1/io2 Block Express (SSD): 
+	1. Provisioned IOPS (PIOPS) SSD
+	2. Highest-performance SSD volume for mission-critical low-latency or high throughput workloads (more than 16,000 IOPS).
+	3. Can be used as **boot volumes**.
+	4. Great for ==**database== workloads** (sensitive to storage performance and consistency)
+	5. io1 (4 GiB - 16 TiB):
+		1. Max PIOPS: ==64,000 for Nitro EC2 instances== & 32,000 for other instances.
+		2. Can increase PIOPS independently from storage size
+	6. io2 Block Express (4 Gib - 64 TiB):
+		1. Sub-millisecond latency
+		2. Very high performance type of volume
+		3. Max PIOPS: 256,000 with an IOPS:GiB ratio of 1,000:1
+	7. Support EBS Multi-Attach
+3. st1 (HDD): 
+	1. Low cost HDD volume designed for frequently accessed, throughput-intensive workloads.
+	2. Can NOT be used as boot volumes.
+	3. 125 GiB to 16 TiB
+	4. Throughput optimized
+		1. Big Data, Data Warehouses, Log Processing
+		2. Max throughput 500 MiB/s - max IOPS 500
+4. sc1: (HDD):
+	1. Lowest cost HDD volume designed for less frequently accessed workloads.
+	2. Can NOT be used as boot volumes.
+	3. Cold HDD (sc1):
+		1. For data that is infrequently accessed 
+		2. Scenarios where ==lowest cost== is important
+		3. Max throughput 250 MiB/s - max IOPS 250
+
+EBS Volumes are characterized in Size, Throughput, IOPS (I/O Ops Per Sec)
+
+Summary of Storage Types
+https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html#solid-state-drives
+
+## Subsection 54. EBS Multi-attach
+
+- io1/io2 volumes may be attached to multiple (==up to 16==) EC2 instances in the same AZ.
+- Each instance would have full read & write permissions to the high performance volumes
+- Use case:
+	- Achieve higher application availability in clustered Linux applications (e.g., Teradata).
+	- Application must manage concurrent write operations.
+	
+## Subsection 55. Amazon EFS
+
+### Amazon Elastic File System (EFS)
+- EFS is a managed network file system (NFS) that can be mounted on many EC2 instances.
+- EFS may be mounted to EC2 instances in different AZs (multi-AZ).
+- Highly available, scalable, ==expensive== (3x thte cost of gp2), pay per use.
+
+1. Create your EFS file systems.
+2. Place it in a security group.
+
+Use cases:
+- Content management
+- Web serving
+- data sharing
+- Wordpress
+Uses NFSv4.1 protocol
+Uses security group to control access to EFS.
+**Only compatible with Linux based AMI, not Windows.**
+Encryption at rest using KMS
+Uses the POSIX file system (a standard file system on Linux) and has a standard file API.
+File system scales automatically, pay-per use (in GB), **no capacity planning!**
+
+### Performance & Storage Classes
+- 1000s of concurrent NFS clients, 10+ GB/s throughput
+- May grow to Petabyte-scale network file system, automatically
+Performance Mode (set at EFS creation time)
+- General Purpose (default): Latency sensitive use-cases (web server, CMS, etc.)
+- Max I/O: Higher latency, throughput, highly parallel (big data, media processing)
+Throughput Mode
+- Bursting: 1 TB = 50+ MiB/s bursts of up to 100 MiB/s
+	- Bursting allows the throughput to scale with the amount of storage space used.
+	- Throughput Modes:
+		- General Purpose:
+			- High performance and latency-sensitive applications.
+		- Max I/O:
+			- Designed for highly parallelized workloads that can tolerate higher latencies.
+			- Good for Big Data
+- Enhanced
+	- Provisioned: 
+		- Set your throughput regardless of the storage size (e.g., 1 GiB/s for 1 TB storage)
+		- Paid for in advance
+	- Elastic (recommended):
+		- Automatically scale throughput up or down based on your workloads.
+			- E.g., up to 3 GiB/s for reads and 1 GiB/s for writes.
+			- Used for unpredictable workloads
+
+### Storage Classes
+
+An optimal storage class configuration can result in over 90% in cost savings.
+#### Storage Tiers (lifecycle management feature - move files after N days)
+- Standard: for frequently accessed files
+- Infrequent access (EFS-IA): higher cost to retrieve files, lower price to store.
+- Archive: rarely accessed data (few times each year), 50% cheaper
+
+You may implement lifecycle policies to move files between storage tiers.
+- e.g., move files that have not been accessed for 60 days to a new storage tier to reduce costs.
+
+#### Availability and Durability
+- Standard: Great for a Multi-AZ setup, great for Prod (resistance to disasters), Higher Availability and Durability
+- One Zone: One AZ, lower-cost, great for dev, backup enabled by default, compatible with IA (EFS One Zone-IA)
+
+## Subsection 56. EFS Hands on
+
+### Set up EFS
+1. AWS Console > EFS > Create file system
+2. Choose a VPC.
+3. Optional Steps
+	1. Choose a File System Type (Regional or One Zone)
+	2. Choose an AZ if using One Zone
+	3. Enable/disable automatic backups
+	4. Set Lifecycle Management Rules
+	5. Set encryption
+	6. Set performance settings (Elastic or Bursting)
+4. Set Network Access Settings
+	1. Choose a VPC
+	2. Set mount targets
+		1. Choose AZs
+		2. Choose Subnet IDs
+		3. Choose Security Groups
+			1. If, at this point, you need to create a security group
+				1. In a new tab, AWS Console > EC2 > Security Groups > Create security group
+				2. Give the group a name (e.g., `efs-demo`)
+				3. Give the group a description (e.g., `EFS Demo SG`)
+				4. No inbound rules for this example.
+				5. Create security group.
+				6. Go back to the EFS Creation tab and reload it to load the new security group
+				7. Get back to Remove the security group selection page, remove other security groups, and add the newly created security group for each AZ.
+		4. Click Next
+		5. Click Next to skip the File System Policy section
+			1. This is advanced for this point in the class.
+		6. Review settings and click Create
+		7. Wait for file system to become available.
+
+### Create EC2 Instances
+1. Create an EC2 instance:
+	1. AWS Console > EC2 > Launch instance
+	2. Give it a name `Instance A`
+	3. Use AWS Linux 2023
+	4. Choose t3.micro (because it's free tier eligible)
+	5. Disable the key pair for now.
+	6. in Network settings, you may allow the firewall to create a new security group, which will allow SSH traffic from anywhere (0.0.0.0/0).
+		1. Note the name of the security group.
+	7. Configure Storage:
+		1. Use 8GiB  gp2 storage
+		2. click `edit` in the file system section
+		3. You'll see an error ("...You must select a subnet before you can add an EFS file system.")
+	8. Scroll back up to the Network Settings, and click `Edit`
+	9. Select a subnet
+	10. Go back to the Storage section
+	11. Select EFS
+	12. Click on `Add shared file system`
+	13. The EFS file system will be selected under File system
+	14. Leave the Mount point as it is for this example (`/mnt/efs/fs1`)
+	15. Leave selected "Automatically create and attach security groups" and "Automatically mount shared file system by attaching required user data script".
+	16. Click `Launch instance`
+2. Create another instance. Use above steps except for the following:
+	1. Name the instance `Instance 
+	2. In the Network Settings, select a different subnet than the once selected for Instance A.
+	3. Select the security group that was created when launching Instance A.
+3. View all Instances and ensure both instances are running.
+
+### EFS Status
+1. AWS Console > EFS > select the volume > Select the EFS Network tab
+	1. You'll notice that multiple security groups were added to each AZ for the file system.
+		1. We added the `efs-demo` Security Group
+		2. `efs-sg-1` and `efs-sg-2` Security Groups were automatically created by the EC2 Console for us and attached to our EFS file system.
+2. AWS Console > EC2 > Security Groups > select a security group (e.g., `efs-sg-2`) > Inbound rules tab
+	1. The rules allow NFS on port 2049 from the SG that is attached to Instance B if you selected `efs-sg-2`.
+
+### Connect to EFS through an EC2 instance
+1. AWS Console > EC2 > Click a checkbox to select Instance A > Click `Connect` at the top of the page.
+2. Select EC2 Instance Connect
+3. Repeat steps 1 and 2 for Instance B
+4. In the Instance A terminal:
+	1. run `ls /mnt/efs/fs1/` to verify the contents of the EFS volume
+		1. It should be empty
+	2. run `sudo su`
+	3. run `echo "hello world" > /mnt/efs/fs1/hello.txt`
+	4. run `cat /mnt/efs/fs1/hello.txt` to print the contents of the new file.
+5. In the Instance B terminal:
+	1. run `ls /mnt/efs/fs1/` to verify the contents of the EFS volume
+		1. hello.txt should be listed
+	2. run `cat /mnt/efs/fs1/hello.txt` to print the contents of the file created by Instance A.
+
+In summary, the EFS volume is connected to both instances.
+
+### Clean Up
+1. AWS Console > EC2 > select all instances > click `Instance state` > select `Terminate (delete) instance`.
+2. AWS Console > EFS > select the volume > click `Delete` at the top of the page.
+3. Wait for the instances and volume to be deleted before you may proceed to the next step.
+4. AWS Console > EC2 > Security Groups > delete all security groups created in this lecture.
+
+## Subsection 57. EFS vs EBS
+
+### EBS volumes:
+- 1 instance at a time (except multi attach io1/io2)
+- locked at the AZ level
+- gp2: IO increases if the disk size increases
+- gp3 and io: IO can increase independently
+- Migrate EBS volumes:
+	- create a snapshot & restore in another AZ
+	- Backups use IO, so you shouldn't run them while your application is handling a lot of traffic because performance may be affected.
+- Root gets terminated by default behavior may be disabled)
+### EFS volumes:
+- May be mounted to 100s of instances across AZs
+- EFS share website files (WordPress)
+- Only for Linux Instances (POSIX)
+- Higher cost than EBS, but you may use storage tiers for cost savings.
+
+## Subsection 58
+
+Delete all AMIs, snapshots, instances, volumes, and security groups that we created in this section.
+
+
